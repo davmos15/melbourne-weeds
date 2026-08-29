@@ -9,6 +9,47 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
+/* ------------------------------------------------------------- WP shapes */
+
+export interface WpRendered { rendered: string }
+
+export interface WpTermRef {
+  id: number;
+  name: string;
+  slug: string;
+  taxonomy: string;
+  parent?: number;
+}
+
+export interface WpMedia {
+  id: number;
+  source_url: string;
+  alt_text?: string;
+  media_details?: { width?: number; height?: number };
+}
+
+/**
+ * One listing, in the shape the REST API returns with `?_embed`.
+ * scripts/wxr.ts synthesises the same shape from a WordPress export file, so
+ * scripts/import.ts does not care which route the content arrived by.
+ */
+export interface WpPost {
+  id: number;
+  slug: string;
+  date: string;
+  date_gmt?: string;
+  link: string;
+  title: WpRendered;
+  content: WpRendered;
+  excerpt?: WpRendered;
+  _embedded?: {
+    'wp:term'?: WpTermRef[][];
+    'wp:featuredmedia'?: WpMedia[];
+  };
+}
+
+/* ------------------------------------------------------------------ source */
+
 export const SOURCE = process.env.WP_SOURCE ?? 'https://weedsofmelbourne.org';
 export const API = `${SOURCE.replace(/\/$/, '')}/wp-json/wp/v2`;
 

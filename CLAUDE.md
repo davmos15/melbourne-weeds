@@ -44,6 +44,10 @@ tree itself is native `<details>` and works with no JavaScript.
   build never depends on the WordPress site being up.
 - Hand corrections go in `data/overrides.json`, keyed by slug. They are merged
   over the import at build time so re-importing never loses them.
+- **The rank chain mapping is configuration, not code**: `data/taxonomy-map.json`,
+  absent until someone puts it there. `npm run recon` writes a *suggestion* to
+  `data/raw/` for a human to check and move into place. Never guess it — with no
+  map the import still runs and reports every listing it left without a `path`.
 - The classification tree and every habitat count are **derived from the data**
   at build time. Never hand-maintain them.
 - Every `<img>` carries `width`/`height`. CLS budget is 0.05.
@@ -51,14 +55,23 @@ tree itself is native `<details>` and works with no JavaScript.
 ## Commands
 
 ```
-npm run recon          # Phase 0 — inspect the WordPress API, report, stop
+npm run recon          # Phase 0 — inspect the source, report, stop
 npm run import         # Phase 1 — WordPress -> data/listings.json
 npm run images         # Phase 2 — download and derive public/img/
 npm run search-index   # rebuild public/search/ (runs before dev and build)
 npm run fonts          # re-fetch the self-hosted woff2 subsets
 npm run fixtures       # generate the development dataset (not content)
+npm run check          # astro check — types and diagnostics
 npm run dev            # local dev server
 npm run build          # static build into dist/
+```
+
+Recon, import and images each work offline as well as against the live API:
+
+```
+npm run recon  -- --wxr=export.xml     # a WordPress Tools -> Export file
+npm run import -- --wxr=export.xml
+npm run images -- --media=/path/to/uploads
 ```
 
 Until the import has been run, `data/listings.json` is empty and the site

@@ -1,0 +1,34 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Types and Astro diagnostics across components, pages and scripts.
+      - run: npm run check
+
+      # A build is the real test: getStaticPaths runs, every route renders,
+      # and the search indexes are regenerated.
+      - run: npm run build
+
+      # The JS budget is a requirement, not an aspiration (SPEC §12).
+      - name: Client JS budget
+        run: |
+          bytes=$(cat dist/_astro/*.js | gzip -c | wc -c)
+          echo "client JS: ${bytes} bytes gzipped (budget 61440)"
+          test "$bytes" -le 61440

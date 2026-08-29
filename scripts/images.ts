@@ -6,8 +6,13 @@
  *
  *   npm run images
  *
+ *   npm run images                        # fetch from the live site
+ *   npm run images -- --media=<dir>       # take them from a local uploads/ tree
+ *
  * Downloads are cached by URL hash in .cache/images/, so re-runs are cheap
- * and a partial run can simply be repeated.
+ * and a partial run can simply be repeated. `--media` is for when the media
+ * host is unreachable: point it at an unzipped wp-content/uploads/ directory
+ * and each image is resolved from disk instead of the network.
  *
  * Derivatives, written as public/img/{slug}/{n}-{size}.{ext}:
  *
@@ -18,6 +23,7 @@
  */
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile, stat, readdir } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import type { Listing } from '../src/lib/types.ts';
@@ -36,6 +42,7 @@ const BUDGET_WARN_BYTES = 700 * 1024 * 1024;
 const BUDGET_HARD_BYTES = 1024 * 1024 * 1024;
 
 const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7);
+const MEDIA_DIR = process.argv.find((a) => a.startsWith('--media='))?.slice(8) ?? process.env.WP_MEDIA_DIR;
 const FORCE = process.argv.includes('--force');
 
 function hash(input: string): string {
@@ -46,9 +53,56 @@ async function exists(path: string): Promise<boolean> {
   try { await stat(path); return true; } catch { return false; }
 }
 
+/**
+ * Index a local uploads/ tree by both its path below `uploads/` and by bare
+ * filename, so an image can be found whether or not the export preserved the
+ * year/month folders.
+ */
+let mediaIndex: Map<string, string> | null = null;
+
+async function indexMedia(dir: string): Promise<Map<string, string>> {
+  const index = new Map<string, string>();
+  const root = dir.endsWith('/') ? dir : `${dir}/`;
+  const walk = async (path: string) => {
+    let entries;
+    try { entries = await readdir(path, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const child = `${path}${entry.name}${entry.isDirectory() ? '/' : ''}`;
+      if (entry.isDirectory()) { await walk(child); continue; }
+      index.set(child.slice(root.length), child);
+      if (!index.has(entry.name)) index.set(entry.name, child);
+    }
+  };
+  await walk(root);
+  return index;
+}
+
+/** Resolve a WordPress media URL against the local uploads/ tree. */
+async function fromDisk(url: string): Promise<Buffer | null> {
+  if (!MEDIA_DIR) return null;
+  mediaIndex ??= await indexMedia(MEDIA_DIR);
+
+  const path = (() => { try { return new URL(url).pathname; } catch { return url; } })();
+  const afterUploads = path.split('/uploads/')[1];
+  const name = basename(path);
+  // WordPress serves resized copies as name-1024x768.jpg; the original is what
+  // we want, so try it before falling back to the exact filename.
+  const original = name.replace(/-\d+x\d+(?=\.[a-z]+$)/i, '');
+
+  for (const key of [afterUploads, name, original].filter(Boolean) as string[]) {
+    const hit = mediaIndex.get(key);
+    if (hit) return readFile(hit);
+  }
+  return null;
+}
+
 async function download(url: string): Promise<Buffer> {
   const cached = `${CACHE_DIR}${hash(url)}`;
   if (await exists(cached)) return readFile(cached);
+
+  const local = await fromDisk(url);
+  if (local) return local;
+  if (MEDIA_DIR) throw new Error(`not found under ${MEDIA_DIR}: ${url}`);
 
   let lastError: unknown;
   for (const delay of [0, 1000, 3000, 7000]) {
@@ -140,6 +194,11 @@ async function main(): Promise<void> {
   let processed = 0;
   let failed = 0;
   const total = targets.reduce((n, l) => n + l.gallery.length, 0);
+
+  if (MEDIA_DIR) {
+    mediaIndex = await indexMedia(MEDIA_DIR);
+    console.log(`Reading media from ${MEDIA_DIR} — ${mediaIndex.size} indexed paths\n`);
+  }
 
   for (const listing of targets) {
     const outDir = `${IMG_DIR}${listing.slug}/`;

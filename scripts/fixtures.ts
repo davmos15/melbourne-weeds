@@ -10,9 +10,17 @@
  * exercise the tree, the habitat index, the gallery, pagination and search,
  * with procedurally generated images rather than photographs.
  *
- * Every fixture slug is prefixed `fixture-`, and public/img/fixture-* is
- * gitignored, so none of this can be mistaken for — or committed alongside —
- * the real thing.
+ * It also emits a synthetic WordPress export file and a matching uploads/
+ * tree, so the offline migration route can be exercised end to end without
+ * touching the live site:
+ *
+ *   npm run recon  -- --wxr=data/fixtures/export.xml
+ *   npm run import -- --wxr=data/fixtures/export.xml
+ *   npm run images -- --media=data/fixtures/uploads
+ *
+ * Every fixture slug is prefixed `fixture-`, and both data/fixtures/ and
+ * public/img/fixture-* are gitignored, so none of this can be mistaken for —
+ * or committed alongside — the real thing.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -81,15 +89,116 @@ async function makeImage(hue: number, index: number, w: number, h: number): Prom
   return sharp(Buffer.from(svg)).jpeg({ quality: 82 }).toBuffer();
 }
 
+/* --------------------------------------------------- WordPress export file */
+
+const xml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const cdata = (s: string) => `<![CDATA[${s.replace(/]]>/g, ']]]]><![CDATA[>')}]]>`;
+
+interface WxrItem {
+  id: number;
+  slug: string;
+  titleHtml: string;
+  date: string;
+  contentHtml: string;
+  terms: { taxonomy: string; slug: string; name: string }[];
+  thumbnailId: number;
+}
+
+interface WxrAttachment { id: number; url: string; alt: string; date: string }
+
+function buildWxr(
+  items: WxrItem[],
+  attachments: WxrAttachment[],
+  terms: { taxonomy: string; slug: string; name: string; parent: string }[],
+): string {
+  const head = [
+    '<?xml version="1.0" encoding="UTF-8" ?>',
+    '<rss version="2.0"',
+    '  xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"',
+    '  xmlns:content="http://purl.org/rss/1.0/modules/content/"',
+    '  xmlns:wfw="http://wellformedweb.org/CommentAPI/"',
+    '  xmlns:dc="http://purl.org/dc/elements/1.1/"',
+    '  xmlns:wp="http://wordpress.org/export/1.2/">',
+    '<channel>',
+    '<title>Weeds of Melbourne (fixture)</title>',
+    '<link>https://example.invalid</link>',
+    '<wp:wxr_version>1.2</wp:wxr_version>',
+    '<wp:base_site_url>https://example.invalid</wp:base_site_url>',
+  ];
+
+  const termXml = terms.map((t, i) =>
+    [
+      '<wp:term>',
+      `<wp:term_id>${100 + i}</wp:term_id>`,
+      `<wp:term_taxonomy>${xml(t.taxonomy)}</wp:term_taxonomy>`,
+      `<wp:term_slug>${xml(t.slug)}</wp:term_slug>`,
+      `<wp:term_parent>${xml(t.parent)}</wp:term_parent>`,
+      `<wp:term_name>${cdata(t.name)}</wp:term_name>`,
+      '</wp:term>',
+    ].join(''),
+  );
+
+  const attachmentXml = attachments.map((a) =>
+    [
+      '<item>',
+      `<title>${xml(a.url.split('/').pop() ?? '')}</title>`,
+      `<wp:post_id>${a.id}</wp:post_id>`,
+      `<wp:post_date>${a.date} 09:00:00</wp:post_date>`,
+      `<wp:post_date_gmt>${a.date} 09:00:00</wp:post_date_gmt>`,
+      '<wp:post_name>attachment</wp:post_name>',
+      '<wp:status>inherit</wp:status>',
+      '<wp:post_type>attachment</wp:post_type>',
+      `<wp:attachment_url>${xml(a.url)}</wp:attachment_url>`,
+      `<wp:postmeta><wp:meta_key>${cdata('_wp_attachment_image_alt')}</wp:meta_key><wp:meta_value>${cdata(a.alt)}</wp:meta_value></wp:postmeta>`,
+      '</item>',
+    ].join(''),
+  );
+
+  const itemXml = items.map((item) =>
+    [
+      '<item>',
+      // Entity-encoded, exactly as WordPress exports a title carrying markup.
+      `<title>${xml(item.titleHtml)}</title>`,
+      `<link>https://example.invalid/${item.slug}</link>`,
+      `<wp:post_id>${item.id}</wp:post_id>`,
+      `<wp:post_date>${item.date} 09:00:00</wp:post_date>`,
+      `<wp:post_date_gmt>${item.date} 09:00:00</wp:post_date_gmt>`,
+      `<wp:post_name>${xml(item.slug)}</wp:post_name>`,
+      '<wp:status>publish</wp:status>',
+      '<wp:post_type>post</wp:post_type>',
+      `<content:encoded>${cdata(item.contentHtml)}</content:encoded>`,
+      '<excerpt:encoded><![CDATA[]]></excerpt:encoded>',
+      ...item.terms.map(
+        (t) => `<category domain="${xml(t.taxonomy)}" nicename="${xml(t.slug)}">${cdata(t.name)}</category>`,
+      ),
+      `<wp:postmeta><wp:meta_key>${cdata('_thumbnail_id')}</wp:meta_key><wp:meta_value>${cdata(String(item.thumbnailId))}</wp:meta_value></wp:postmeta>`,
+      '</item>',
+    ].join(''),
+  );
+
+  return [...head, ...termXml, ...attachmentXml, ...itemXml, '</channel>', '</rss>', ''].join('\n');
+}
+
 async function main(): Promise<void> {
   await mkdir(OUT, { recursive: true });
   const listings: Listing[] = [];
+  const wxrItems: WxrItem[] = [];
+  const wxrAttachments: WxrAttachment[] = [];
+  const wxrTerms: { taxonomy: string; slug: string; name: string; parent: string }[] = [];
+  const seenTerm = new Set<string>();
   let n = 0;
+  let attachmentId = 5000;
 
   for (const [s, seed] of SEEDS.entries()) {
     const slug = slugFor(seed);
     const dir = `${IMG}${slug}/`;
     await mkdir(dir, { recursive: true });
+
+    const month = String((s % 12) + 1).padStart(2, '0');
+    const uploadDir = `${OUT}uploads/2023/${month}/`;
+    await mkdir(uploadDir, { recursive: true });
+    const bodyImages: string[] = [];
 
     const gallery = [];
     for (let i = 0; i < seed.images; i += 1) {
@@ -97,6 +206,18 @@ async function main(): Promise<void> {
       const [w, h] = i % 3 === 0 ? [2000, 1500] : i % 3 === 1 ? [1500, 2000] : [1800, 1800];
       const source = await makeImage(seed.hue, i, w, h);
       const stem = `${dir}${i + 1}`;
+
+      // The same photograph, as it would sit in wp-content/uploads/.
+      const fileName = `${slug}-${i + 1}.jpg`;
+      await writeFile(`${uploadDir}${fileName}`, source);
+      const url = `https://example.invalid/wp-content/uploads/2023/${month}/${fileName}`;
+      const alt = `${seed.common} (${seed.binomial}) — fixture image ${i + 1}`;
+      attachmentId += 1;
+      wxrAttachments.push({ id: attachmentId, url, alt, date: `2023-${month}-01` });
+      // WordPress links the resized copy in the body, including for the
+      // featured image — so the importer's dedupe has to see through the
+      // -1024x768 suffix or every lead photograph is counted twice.
+      bodyImages.push(`<img src="${url.replace('.jpg', '-1024x768.jpg')}" alt="${alt}" width="1024" height="768" />`);
 
       const sizes: [number, 'avif' | 'webp'][] =
         i === 0
@@ -126,6 +247,38 @@ async function main(): Promise<void> {
       'A third fixture paragraph, so pages have a plausible length and the previous/next controls sit below a real scroll.',
     ];
 
+    const terms = [
+      ...HABITATS.filter((h) => seed.habitats.includes(h.slug)).map((h) => ({
+        taxonomy: 'post_tag',
+        slug: h.wp,
+        name: h.label,
+      })),
+      ...seed.chain.map(([rank, name]) => ({
+        taxonomy: rank,
+        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        name,
+      })),
+    ];
+    for (const term of terms) {
+      const key = `${term.taxonomy}::${term.slug}`;
+      if (seenTerm.has(key)) continue;
+      seenTerm.add(key);
+      wxrTerms.push({ ...term, parent: '' });
+    }
+
+    wxrItems.push({
+      id: 9000 + s,
+      slug,
+      // Both names in one title, the botanical one in <em> — the split signal.
+      titleHtml: `${seed.common} (<em>${seed.binomial}</em>)`,
+      date: `2023-${month}-${String((s % 27) + 1).padStart(2, '0')}`,
+      contentHtml: body.map((para) => `<p>${para}</p>`).join('\n') +
+        (s % 3 === 0 ? '\n<p><a href="https://www.instagram.com/p/FIXTURE00000/">Original post</a></p>' : '') +
+        `\n${bodyImages.join('\n')}`,
+      terms,
+      thumbnailId: attachmentId - seed.images + 1,
+    });
+
     listings.push({
       slug,
       wpId: 9000 + s,
@@ -146,8 +299,14 @@ async function main(): Promise<void> {
   }
 
   await writeFile(`${OUT}listings.json`, `${JSON.stringify(listings, null, 2)}\n`);
-  console.log(`${listings.length} fixture listings, ${n} generated images -> data/fixtures/listings.json`);
-  console.log('Build with:  WEEDS_FIXTURES=1 npm run build');
+  await writeFile(`${OUT}export.xml`, buildWxr(wxrItems, wxrAttachments, wxrTerms));
+
+  console.log(`${listings.length} fixture listings, ${n} generated images`);
+  console.log('  data/fixtures/listings.json   ready-made dataset');
+  console.log(`  data/fixtures/export.xml      synthetic WordPress export (${wxrItems.length} posts, ${wxrTerms.length} terms)`);
+  console.log('  data/fixtures/uploads/        matching media tree');
+  console.log('\nReview the site:      WEEDS_FIXTURES=1 npm run build');
+  console.log('Exercise the import:  npm run recon -- --wxr=data/fixtures/export.xml');
 }
 
 main().catch((error) => {

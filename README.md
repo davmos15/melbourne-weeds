@@ -30,9 +30,20 @@ Without fixtures the site builds correctly but empty, because
 |---|---|
 | `npm run dev` | Local dev server |
 | `npm run build` | Static build into `dist/` |
-| `npm run recon` | Phase 0 — inspect the WordPress API and report |
+| `npm run check` | `astro check` — types and diagnostics |
+| `npm run recon` | Phase 0 — inspect the source and report |
 | `npm run import` | Phase 1 — WordPress → `data/listings.json` |
 | `npm run images` | Phase 2 — download and derive `public/img/` |
+
+Recon, import and images each take their content from the live REST API or,
+with no network access at all, from a WordPress **Tools → Export** file and a
+local `uploads/` directory:
+
+```bash
+npm run recon  -- --wxr=export.xml
+npm run import -- --wxr=export.xml
+npm run images -- --media=/path/to/uploads
+```
 | `npm run search-index` | Rebuild `public/search/` (runs before dev and build) |
 | `npm run fonts` | Re-fetch the self-hosted woff2 subsets |
 | `npm run fixtures` | Generate the synthetic development dataset |

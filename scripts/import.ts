@@ -3,83 +3,89 @@
  *
  *   npm run import
  *
+ *   npm run import                      # from the live REST API
+ *   npm run import -- --wxr=export.xml   # from a WordPress export file
+ *
  * Run `npm run recon` first and read data/raw/. The RANK_TAXONOMIES block
  * below is the one thing this script cannot work out for itself: it must be
  * filled in from what recon actually reports, not guessed.
+ *
+ * Both routes produce identical listings — see scripts/wxr.ts for when the
+ * export file is the only way in.
  *
  * The output is committed, so a site build never depends on the source
  * WordPress install being up. Hand corrections live in data/overrides.json
  * and are merged over this at build time, so re-running never loses them.
  */
 import { writeFile, readFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import type { GalleryImage, Listing, PathNode, Rank } from '../src/lib/types.ts';
 import { HABITAT_BY_WP, HABITATS } from '../src/lib/habitats.ts';
+import type { WpPost, WpTermRef } from './wp.ts';
 import {
   api, decodeEntities, DATA_DIR, dumpRaw, firstSentence, slugify, toParagraphs, SOURCE,
 } from './wp.ts';
+import { readWxr, wxrPathFromArgs } from './wxr.ts';
 
 /* ------------------------------------------------------------------ config */
 
 /**
- * Which WordPress taxonomy holds each rank, in order.
+ * Which WordPress taxonomy holds each rank, and which holds the habitat tags.
  *
- * UNCONFIGURED. `npm run recon` reports whether the rank chain exists in the
- * API at all. Three outcomes:
+ * This is the one thing the importer cannot work out for itself, so it is
+ * configuration rather than code: `data/taxonomy-map.json`, absent by default.
  *
- *   1. Rank-named taxonomies exist  → list them here, e.g. { class: 'class', … }
+ * `npm run recon` writes a *suggested* map to
+ * `data/raw/taxonomy-map.suggested.json` when it finds taxonomies that look
+ * like ranks. Read it, satisfy yourself it is right, then move it to
+ * `data/taxonomy-map.json`. That deliberate step is the point: SPEC §4 Phase 0
+ * says report and stop for a decision, not guess.
+ *
+ * Three outcomes recon distinguishes:
+ *
+ *   1. Rank-named taxonomies exist  → the suggested map is ready to use
  *   2. One hierarchical taxonomy encodes the chain by nesting depth
- *                                   → set RANK_FROM_NESTING to that taxonomy
+ *                                   → set `fromNesting` and confirm the depth
+ *                                     order by hand against data/raw/terms.json
  *   3. Neither                      → the chain is only in the hand-built HTML
  *                                     on /classification. That is a separate,
  *                                     more fragile scrape-and-join job. Do not
  *                                     bolt it on here without planning it.
  *
- * Left empty, the import still runs and produces complete listings with an
+ * With no map, the import still runs and produces complete listings with an
  * empty `path`; every one of them is then named in the validation report.
  */
-const RANK_TAXONOMIES: Partial<Record<Rank, string>> = {
-  // class: 'class',
-  // superorder: 'superorder',
-  // order: 'order',
-  // family: 'family',
-  // genus: 'genus',
-  // species: 'species',
-};
+interface TaxonomyMap {
+  /** Rank -> the taxonomy slug that holds it. */
+  ranks?: Partial<Record<Rank, string>>;
+  /** Instead: one hierarchical taxonomy whose depth encodes the chain. */
+  fromNesting?: { taxonomy: string; ranks: Rank[] };
+  /** Which taxonomy carries the habitat tags. Defaults to post_tag. */
+  habitatTaxonomy?: string;
+  /** Which post type holds the listings. Defaults to posts. */
+  postType?: string;
+}
 
-/** Set instead if one hierarchical taxonomy encodes the chain by depth. */
-const RANK_FROM_NESTING: { taxonomy: string; ranks: Rank[] } | null = null;
+function loadTaxonomyMap(): TaxonomyMap {
+  const path = `${DATA_DIR}taxonomy-map.json`;
+  if (!existsSync(path)) return {};
+  const raw = JSON.parse(readFileSync(path, 'utf8')) as TaxonomyMap & { _readme?: unknown };
+  delete raw._readme;
+  return raw;
+}
+
+const TAXONOMY_MAP = loadTaxonomyMap();
+
+const RANK_TAXONOMIES: Partial<Record<Rank, string>> = TAXONOMY_MAP.ranks ?? {};
+const RANK_FROM_NESTING = TAXONOMY_MAP.fromNesting ?? null;
 
 /** Which taxonomy carries the habitat tags. Confirm against recon output. */
-const HABITAT_TAXONOMY = process.env.WP_HABITAT_TAXONOMY ?? 'post_tag';
+const HABITAT_TAXONOMY = process.env.WP_HABITAT_TAXONOMY ?? TAXONOMY_MAP.habitatTaxonomy ?? 'post_tag';
 
 /** Which post type holds the listings. */
-const POST_TYPE = process.env.WP_POST_TYPE ?? 'posts';
+const POST_TYPE = process.env.WP_POST_TYPE ?? TAXONOMY_MAP.postType ?? 'posts';
 
-/* ------------------------------------------------------------------- types */
-
-interface WpRendered { rendered: string }
-interface WpTermRef { id: number; name: string; slug: string; taxonomy: string; parent?: number }
-interface WpMedia {
-  id: number;
-  source_url: string;
-  alt_text?: string;
-  media_details?: { width?: number; height?: number };
-}
-interface WpPost {
-  id: number;
-  slug: string;
-  date: string;
-  date_gmt?: string;
-  link: string;
-  title: WpRendered;
-  content: WpRendered;
-  excerpt?: WpRendered;
-  _embedded?: {
-    'wp:term'?: WpTermRef[][];
-    'wp:featuredmedia'?: WpMedia[];
-  };
-}
-
+/** One row of the validation report. */
 interface Problem {
   slug: string;
   common: string;
@@ -215,9 +221,20 @@ async function fetchAll(): Promise<WpPost[]> {
   return posts;
 }
 
-async function main(): Promise<void> {
+async function loadPosts(): Promise<WpPost[]> {
+  const wxr = wxrPathFromArgs();
+  if (wxr) {
+    console.log(`Importing from the export file ${wxr}\n`);
+    const source = await readWxr(wxr, POST_TYPE === 'posts' ? 'post' : POST_TYPE);
+    console.log(`  ${source.posts.length} published ${POST_TYPE}, ${source.terms.length} terms`);
+    return source.posts;
+  }
   console.log(`Importing from ${SOURCE}\n`);
-  const posts = await fetchAll();
+  return fetchAll();
+}
+
+async function main(): Promise<void> {
+  const posts = await loadPosts();
   await dumpRaw('posts.json', posts);
 
   const problems: Problem[] = [];
@@ -290,9 +307,10 @@ async function main(): Promise<void> {
 
   if (!Object.keys(RANK_TAXONOMIES).length && !RANK_FROM_NESTING) {
     console.log(
-      '\n  NOTE: RANK_TAXONOMIES is unconfigured, so every listing has an empty\n' +
-        '  `path` and the classification tree will be empty. Run `npm run recon`\n' +
-        '  and fill it in from what it reports — do not guess the structure.',
+      '\n  NOTE: data/taxonomy-map.json is absent, so every listing has an empty\n' +
+        '  `path` and the classification tree will be empty. Run `npm run recon`,\n' +
+        '  read data/raw/taxonomy-map.suggested.json, and move it into place once\n' +
+        '  you are satisfied it is right — do not guess the structure.',
     );
   }
 

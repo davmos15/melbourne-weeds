@@ -528,5 +528,18 @@ else follows the spec as written.
 
 7. **Phase 0 recon could not be run.** `weedsofmelbourne.org` is not reachable
    from the build environment. See `MIGRATION.md` — the rank-chain question is
-   still open and `scripts/import.ts` is deliberately left unconfigured rather
-   than guessing at it.
+   still open, and the importer is deliberately left unconfigured rather than
+   guessing at it.
+
+8. **The rank mapping is configuration, not a constant in the importer.**
+   §4 says to report and stop for a decision. `data/taxonomy-map.json` does not
+   exist until a human puts it there; recon writes a suggestion to `data/raw/`
+   for them to check first. Exact rank names are matched before substrings, so
+   `order` cannot claim the `superorder` taxonomy.
+
+9. **Recon, import and images each accept an offline source** — a WordPress
+   `Tools → Export` file (`--wxr=`) and a local `uploads/` tree (`--media=`) —
+   because §4's three phases are otherwise unrunnable whenever the live site is
+   unreachable, which is the situation this build was done in.
+   `scripts/wxr.ts` parses the export into exactly the shape the REST API
+   returns with `?_embed`, so there is one importer, not two.
