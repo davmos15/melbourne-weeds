@@ -1,0 +1,32 @@
+{
+  "name": "weeds-of-melbourne",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run search-index && astro dev",
+    "build": "npm run search-index && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "recon": "tsx scripts/recon.ts",
+    "import": "tsx scripts/import.ts",
+    "images": "tsx scripts/images.ts",
+    "search-index": "tsx scripts/search-index.ts",
+    "fonts": "tsx scripts/fonts.ts",
+    "fixtures": "tsx scripts/fixtures.ts"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.6.0",
+    "astro": "^5.14.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^22.10.2",
+    "sharp": "^0.34.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

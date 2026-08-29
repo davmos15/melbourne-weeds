@@ -1,0 +1,90 @@
+/*
+ * Weeds of Melbourne — design tokens (SPEC §9).
+ *
+ * The ground is quiet and cool so the photographs carry all the colour.
+ * Hairline rules and uppercase condensed labels do the structural work.
+ * The magenta is used sparingly — active states, counts, hover — never a fill.
+ */
+
+:root {
+  /* Palette */
+  --mount: #e6e7e1;   /* page ground — pale grey-green, herbarium mount card */
+  --mount-2: #dcded5; /* recessed panels, hover */
+  --mount-3: #cdd1c5;
+  --ink: #1f241e;     /* body text */
+  --ink-2: #5a6155;   /* secondary */
+  --rule: #b9beb0;    /* hairlines */
+  --bloom: #a81e56;   /* accent — the magenta of Romulea and Oxalis */
+  --basalt: #2b2f2b;  /* header chrome, lightbox backdrop */
+
+  /* Typefaces. The fallbacks are metric-matched below so nothing shifts on swap. */
+  --serif: 'Spectral', 'Spectral Fallback', Georgia, 'Times New Roman', serif;
+  --cond: 'Barlow Condensed', 'Barlow Condensed Fallback', 'Arial Narrow', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Type scale — mobile first, nudged up with clamp() rather than breakpoints. */
+  --t-hero: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem);
+  --t-h1: clamp(1.65rem, 1.25rem + 1.9vw, 2.6rem);
+  --t-h2: clamp(1.1rem, 0.98rem + 0.6vw, 1.4rem);
+  --t-h3: 1.0625rem;
+  --t-body: 1.0625rem;
+  --t-small: 0.875rem;
+  --t-label: 0.75rem;
+
+  /* Spacing — a 4px base, named by role rather than size. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+
+  /* Structure */
+  --measure: 34rem;        /* body copy line length */
+  --page-max: 78rem;
+  --gutter: var(--s-4);
+  --header-h: 3.5rem;
+  --radius: 2px;           /* almost square — herbarium label, not app chrome */
+  --hair: 1px solid var(--rule);
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 180ms;
+
+  color-scheme: light;
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: var(--s-5);
+    --header-h: 4rem;
+  }
+}
+
+@media (min-width: 1000px) {
+  :root { --gutter: var(--s-6); }
+}
+
+/*
+ * Metric-matched fallbacks (SPEC §12: no layout shift when fonts swap).
+ * Numbers measured from the shipped woff2 against the named local face —
+ * regenerate with scripts/fonts.ts if the typefaces ever change.
+ */
+@font-face {
+  font-family: 'Spectral Fallback';
+  src: local('Georgia'), local('Times New Roman'), local('Times');
+  ascent-override: 105.26%;
+  descent-override: 46.02%;
+  line-gap-override: 0%;
+  size-adjust: 100.61%;
+}
+
+@font-face {
+  font-family: 'Barlow Condensed Fallback';
+  src: local('Arial Narrow'), local('Helvetica Neue Condensed'), local('Arial');
+  ascent-override: 101.48%;
+  descent-override: 20.30%;
+  line-gap-override: 0%;
+  size-adjust: 98.54%;
+}

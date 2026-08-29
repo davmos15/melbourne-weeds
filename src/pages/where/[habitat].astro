@@ -1,0 +1,52 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CardGrid from '../../components/CardGrid.astro';
+import { HABITATS } from '../../lib/habitats.ts';
+import { getListings } from '../../lib/listings.ts';
+import { pluralise } from '../../lib/format.ts';
+import { asset, u } from '../../lib/url.ts';
+
+export const getStaticPaths = (() => {
+  const listings = getListings();
+  // Every habitat gets a page, including an empty one (SPEC §6).
+  return HABITATS.map((habitat) => ({
+    params: { habitat: habitat.slug },
+    props: {
+      habitat,
+      listings: listings.filter((l) => l.habitats.includes(habitat.slug)),
+    },
+  }));
+}) satisfies GetStaticPaths;
+
+const { habitat, listings } = Astro.props;
+const lead = listings.find((l) => l.gallery.length)?.gallery[0];
+---
+
+<BaseLayout
+  title={habitat.label}
+  description={`${habitat.description} ${listings.length} ${pluralise(listings.length, 'plant')} recorded in this habitat around Melbourne.`}
+  path={`/where/${habitat.slug}/`}
+  image={lead ? asset(`${lead.src}-900.webp`) : undefined}
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">Where you found it</p>
+      <h1>{habitat.label}</h1>
+      <p class="measure">{habitat.description}</p>
+      <p class="label"><span class="count">{listings.length}</span> {pluralise(listings.length, 'listing')}</p>
+    </section>
+
+    <section class="section">
+      <CardGrid
+        listings={listings}
+        empty={`Nothing is filed under ${habitat.label} yet. Try another habitat, or browse the full classification.`}
+      />
+    </section>
+
+    <p class="hero links">
+      <a class="button button--quiet" href={u('/')}>All habitats</a>
+      <a class="button button--quiet" href={u('/all/')}>Every listing</a>
+    </p>
+  </div>
+</BaseLayout>

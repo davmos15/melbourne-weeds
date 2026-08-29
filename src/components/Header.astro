@@ -1,0 +1,67 @@
+---
+import { u } from '../lib/url.ts';
+import { getListings } from '../lib/listings.ts';
+
+interface Props { nav?: string }
+const { nav } = Astro.props;
+
+const total = getListings().length;
+
+const links = [
+  { key: 'all', href: u('/all/'), label: 'All listings' },
+  { key: 'tree', href: u('/tree/'), label: 'Classification' },
+  { key: 'about', href: u('/about/'), label: 'About' },
+];
+---
+
+<header class="header">
+  <div class="wrap header-inner">
+    <div class="header-bar">
+      <a class="brand" href={u('/')}>Weeds <span>of</span> Melbourne</a>
+      <nav aria-label="Main">
+        {links.map((l) => (
+          <a href={l.href} aria-current={nav === l.key ? 'page' : undefined}>{l.label}</a>
+        ))}
+      </nav>
+    </div>
+
+    <!-- One always-visible search field, on every page (SPEC §10). It is a
+         real GET form, so it works before — and without — JavaScript. -->
+    <form
+      class="header-search"
+      role="search"
+      action={u('/search/')}
+      method="get"
+      data-search
+      data-endpoint={u('/search/')}
+      data-light={u('/search/light.json')}
+      data-full={u('/search/full.json')}
+    >
+      <div class="searchbox">
+        <label class="visually-hidden" for="q">Search plants</label>
+        <input
+          id="q"
+          type="search"
+          name="q"
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="search"
+          placeholder={total ? `Search ${total} plants…` : 'Search plants…'}
+          aria-describedby="search-status"
+          aria-expanded="false"
+          aria-controls="search-panel"
+          role="combobox"
+          aria-autocomplete="list"
+        />
+        <span class="hint" aria-hidden="true" data-search-hint>/</span>
+        <div class="search-panel" id="search-panel" role="listbox" aria-label="Search results" hidden></div>
+      </div>
+      <p class="visually-hidden" id="search-status" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</header>
+
+<script>
+  import '../islands/search.ts';
+</script>

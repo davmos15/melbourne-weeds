@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Tree from '../../components/Tree.astro';
+import { getListings } from '../../lib/listings.ts';
+import { getTree } from '../../lib/tree.ts';
+
+const listings = getListings();
+const tree = getTree(listings);
+---
+
+<BaseLayout
+  title="Classification"
+  description={`The full taxonomic tree of every plant on the site — ${tree.size} groups from class down to species.`}
+  path="/tree/"
+  nav="tree"
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">Browse by classification</p>
+      <h1>Classification</h1>
+      <p class="measure">
+        Every plant on the site, placed from class down to species. The tree is
+        built from the listings themselves, so it is never out of step with them.
+      </p>
+      <p class="label">
+        <span class="count">{tree.size}</span> groups · <span class="count">{listings.length}</span> listings
+      </p>
+    </section>
+
+    {/* Collapsed to the top level on load, exactly as on the home page
+        (requirement 5). */}
+    <section class="section">
+      <Tree nodes={tree.roots} id="full-tree" />
+    </section>
+  </div>
+</BaseLayout>

@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getListings } from '../lib/listings.ts';
+import { u } from '../lib/url.ts';
+
+const total = getListings().length;
+---
+
+<BaseLayout
+  title="Search"
+  description={`Search all ${total} plants on Weeds of Melbourne by common name, botanical name, genus, family, order, habitat or text.`}
+  path="/search/"
+  noindex
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">Search</p>
+      {/* The island fills these from ?q= on a cold load, so this URL is
+          bookmarkable and shareable exactly as it stands (SPEC §10). */}
+      <h1>Results for <span data-search-query>everything</span></h1>
+      <p class="label" data-search-count></p>
+    </section>
+
+    <section class="section">
+      <div class="results" data-search-results>
+        <p class="empty">Type in the search field above to look through every listing.</p>
+      </div>
+
+      <noscript>
+        <p class="empty">
+          Search needs JavaScript. You can still browse
+          <a href={u('/all/')}>all {total} listings</a>, the
+          <a href={u('/tree/')}>classification</a>, or the
+          <a href={u('/')}>habitats</a>.
+        </p>
+      </noscript>
+    </section>
+  </div>
+</BaseLayout>

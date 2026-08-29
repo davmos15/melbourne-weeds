@@ -1,0 +1,31 @@
+---
+import type { Rank } from '../lib/types.ts';
+import { rankLabel } from '../lib/tree.ts';
+import { treeUrl } from '../lib/url.ts';
+
+/** Accepts resolved TreeNodes — see resolvePath() — or anything shaped alike. */
+interface Props {
+  path: { rank: Rank; name: string; slug: string }[];
+  label?: string;
+}
+
+const { path, label = 'Classification' } = Astro.props;
+---
+
+{
+  path.length > 0 && (
+    <nav aria-label={label}>
+      <ol class="crumb">
+        {path.map((node) => (
+          <li class={node.rank}>
+            <a href={treeUrl(node.slug)}>
+              {/* The rank name is real information, not decoration (SPEC §7). */}
+              <span class="label">{rankLabel(node.rank)}</span>
+              <span class="crumb-term">{node.name}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}

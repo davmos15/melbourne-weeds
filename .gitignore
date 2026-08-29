@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.astro/
+data/raw/
+.cache/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Generated at build time by scripts/search-index.ts
+public/search/*.json
+
+# Development fixtures — generated, never content (scripts/fixtures.ts)
+data/fixtures/
+public/img/fixture-*/
+
+# Local review artefacts
+shots/
+*.mjs.local

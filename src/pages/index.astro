@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HabitatIndex from '../components/HabitatIndex.astro';
+import Tree from '../components/Tree.astro';
+import { getListings } from '../lib/listings.ts';
+import { getTree } from '../lib/tree.ts';
+import { u } from '../lib/url.ts';
+
+const listings = getListings();
+const tree = getTree(listings);
+
+const description =
+  'A visual glossary of the naturalised and weedy flora of Melbourne — ' +
+  `${listings.length} plants, photographed where they were found, with notes on how each came to be here.`;
+---
+
+<BaseLayout title="Weeds of Melbourne" description={description} path="/">
+  <div class="wrap">
+    {/* SPEC §6 — the habitat index and the classification tree *are* the home
+        page. There is deliberately no listing feed and no "recently added". */}
+    <section class="hero">
+      <h1 class="visually-hidden">Weeds of Melbourne</h1>
+      <p class="hero-lead">
+        The naturalised and weedy flora of Melbourne, photographed where it was found.
+      </p>
+      <p class="links">
+        <a class="button" href={u('/all/')}>All {listings.length} listings</a>
+        <a class="button button--quiet" href={u('/tree/')}>Full classification</a>
+      </p>
+    </section>
+
+    <section class="section" aria-labelledby="where">
+      <div class="section-head">
+        <h2 id="where">Where you found it</h2>
+        <span class="label">Nine habitats</span>
+      </div>
+      <HabitatIndex listings={listings} />
+    </section>
+
+    <section class="section" aria-labelledby="browse">
+      <div class="section-head">
+        <h2 id="browse">Browse by classification</h2>
+        <span class="label">{tree.size} groups</span>
+      </div>
+      <Tree nodes={tree.roots} id="home-tree" />
+    </section>
+  </div>
+</BaseLayout>

@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+/*
+ * PLACEHOLDER COPY. The live site's reference list could not be fetched
+ * during the build (see MIGRATION.md). The links below are the standing
+ * sources each listing already deep-links into; replace this list with Adi's
+ * own bibliography before launch.
+ */
+const sources = [
+  { name: 'VicFlora', href: 'https://vicflora.rbg.vic.gov.au/', note: 'Flora of Victoria, Royal Botanic Gardens Victoria — the standing authority for names and distributions used here.' },
+  { name: 'Atlas of Living Australia', href: 'https://www.ala.org.au/', note: 'Occurrence records and images, aggregated from Australian herbaria and observers.' },
+  { name: 'Australian Plant Census', href: 'https://biodiversity.org.au/nsl/services/search/taxonomy', note: 'Accepted names and synonymy for the Australian vascular flora.' },
+  { name: 'Weeds of Australia', href: 'https://keyserver.lucidcentral.org/weeds/', note: 'Identification keys and profiles for naturalised species.' },
+  { name: 'Agriculture Victoria — Weeds', href: 'https://agriculture.vic.gov.au/biosecurity/weeds', note: 'Declared noxious weed listings for Victoria.' },
+];
+---
+
+<BaseLayout
+  title="References"
+  description="The sources behind the names, distributions and histories on Weeds of Melbourne."
+  path="/references/"
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">References</p>
+      <h1>Where this comes from</h1>
+      <p class="measure">
+        Names and distributions follow VicFlora unless a listing says otherwise.
+        These are the standing sources; anything specific to one plant is cited
+        in its own text.
+      </p>
+    </section>
+
+    <section class="section">
+      <div class="links-list">
+        {sources.map((source) => (
+          <a href={source.href} rel="noopener noreferrer external">
+            <span>{source.note}</span>
+            <span class="where">{source.name}</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  </div>
+</BaseLayout>

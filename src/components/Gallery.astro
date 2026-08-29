@@ -1,0 +1,121 @@
+---
+import type { GalleryImage } from '../lib/types.ts';
+import { altFor } from '../lib/format.ts';
+import { asset } from '../lib/url.ts';
+
+interface Props {
+  images: GalleryImage[];
+  common: string;
+  binomial: string;
+}
+
+const { images, common, binomial } = Astro.props;
+const label = `Photographs of ${common}`;
+
+// Derivative naming, written by scripts/images.ts:
+//   {stem}-400.avif|webp   grid thumbnail  (lead only)
+//   {stem}-900.avif|webp   card / header   (lead only)
+//   {stem}-1600.avif       gallery + lightbox (all)
+const src = (stem: string, size: number, ext: string) => asset(`${stem}-${size}.${ext}`);
+const sizes = '(min-width: 1000px) 60rem, 100vw';
+---
+
+{
+  images.length > 0 && (
+    <figure
+      class="gallery"
+      data-gallery
+      role="group"
+      aria-roledescription="carousel"
+      aria-label={label}
+    >
+      <div
+        class="gallery-track"
+        data-track
+        tabindex="0"
+        aria-label={`${label} — swipe or use the arrow keys`}
+      >
+        {images.map((image, i) => {
+          const alt = altFor(common, binomial, image.alt);
+          const lead = i === 0;
+          return (
+            <div
+              class="gallery-frame"
+              data-full={src(image.src, 1600, 'avif')}
+              data-w={image.w}
+              data-h={image.h}
+              data-alt={alt}
+              data-blur={image.blur}
+              style={image.blur ? `background-image:url(${image.blur})` : undefined}
+            >
+              <picture>
+                {/* The lead image also has a 900px derivative — that is the
+                    LCP element on a phone, so it must not fetch 1600px. */}
+                <source
+                  type="image/avif"
+                  sizes={sizes}
+                  srcset={
+                    lead
+                      ? `${src(image.src, 900, 'avif')} 900w, ${src(image.src, 1600, 'avif')} 1600w`
+                      : `${src(image.src, 1600, 'avif')} 1600w`
+                  }
+                />
+                {lead && (
+                  <source type="image/webp" sizes={sizes} srcset={`${src(image.src, 900, 'webp')} 900w`} />
+                )}
+                <img
+                  src={lead ? src(image.src, 900, 'webp') : src(image.src, 1600, 'avif')}
+                  alt={alt}
+                  width={image.w}
+                  height={image.h}
+                  sizes={sizes}
+                  loading={lead ? 'eager' : 'lazy'}
+                  fetchpriority={lead ? 'high' : undefined}
+                  decoding={lead ? 'sync' : 'async'}
+                />
+              </picture>
+            </div>
+          );
+        })}
+      </div>
+
+      {images.length > 1 && (
+        <Fragment>
+          <button type="button" class="gallery-arrow prev" data-prev aria-label="Previous photograph">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M12.5 4L6.5 10l6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button type="button" class="gallery-arrow next" data-next aria-label="Next photograph">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M7.5 4l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </Fragment>
+      )}
+
+      <figcaption class="gallery-bar">
+        {images.length > 1 ? (
+          <div class="dots">
+            {images.map((_, i) => (
+              <button
+                type="button"
+                class="dot"
+                data-dot
+                aria-current={i === 0 ? 'true' : 'false'}
+                aria-label={`Photograph ${i + 1} of ${images.length}`}
+              />
+            ))}
+          </div>
+        ) : (
+          <span class="gallery-hint">Tap to enlarge</span>
+        )}
+        <span class="gallery-counter" data-counter>1 / {images.length}</span>
+      </figcaption>
+    </figure>
+  )
+}
+
+<script>
+  import '../islands/gallery.ts';
+</script>

@@ -1,0 +1,70 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CardGrid from '../../components/CardGrid.astro';
+import Crumb from '../../components/Crumb.astro';
+import Tree from '../../components/Tree.astro';
+import { getListings } from '../../lib/listings.ts';
+import { getTree, allNodes, rankLabel } from '../../lib/tree.ts';
+import { pluralise } from '../../lib/format.ts';
+import { asset, u } from '../../lib/url.ts';
+
+export const getStaticPaths = (() => {
+  const tree = getTree(getListings());
+  // One page per node — a few hundred of them, all generated (SPEC §6).
+  return allNodes(tree).map((node) => ({
+    params: { node: node.slug },
+    props: { node },
+  }));
+}) satisfies GetStaticPaths;
+
+const { node } = Astro.props;
+const lead = node.listings.find((l) => l.gallery.length)?.gallery[0];
+const isSpecies = node.rank === 'species';
+const label = rankLabel(node.rank);
+---
+
+<BaseLayout
+  title={`${node.name} (${label})`}
+  description={`${node.listings.length} ${pluralise(node.listings.length, 'plant')} on Weeds of Melbourne in the ${label.toLowerCase()} ${node.name}.`}
+  path={`/tree/${node.slug}/`}
+  image={lead ? asset(`${lead.src}-900.webp`) : undefined}
+  nav="tree"
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">{label}</p>
+      <h1 style={isSpecies ? 'font-style:italic' : undefined}>{node.name}</h1>
+      {node.ancestors.length > 0 && (
+        <div style="margin-top:1rem">
+          <Crumb path={node.ancestors} label={`Ranks above ${node.name}`} />
+        </div>
+      )}
+      <p class="label">
+        <span class="count">{node.listings.length}</span> {pluralise(node.listings.length, 'listing')}
+        {node.children.length > 0 && <> · <span class="count">{node.children.length}</span> {pluralise(node.children.length, 'group')} below</>}
+      </p>
+    </section>
+
+    {node.children.length > 0 && (
+      <section class="section" aria-labelledby="below">
+        <div class="section-head"><h2 id="below">Below {node.name}</h2></div>
+        <Tree nodes={node.children} id={`tree-${node.slug}`} />
+      </section>
+    )}
+
+    <section class="section" aria-labelledby="listings">
+      <div class="section-head">
+        <h2 id="listings">Everything in {node.name}</h2>
+      </div>
+      <CardGrid
+        listings={node.listings}
+        empty={`No listings are filed under ${node.name} yet.`}
+      />
+    </section>
+
+    <p class="hero links">
+      <a class="button button--quiet" href={u('/tree/')}>Full classification</a>
+    </p>
+  </div>
+</BaseLayout>

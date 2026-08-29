@@ -1,0 +1,41 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CardGrid from '../../components/CardGrid.astro';
+import Pager from '../../components/Pager.astro';
+import { getListings } from '../../lib/listings.ts';
+import { pluralise } from '../../lib/format.ts';
+
+export const getStaticPaths = (({ paginate }) => {
+  // 48 per page: 400 cards at once is too heavy for a phone (SPEC §6).
+  // Inlined because Astro hoists getStaticPaths out of the module scope.
+  return paginate(getListings(), { pageSize: 48 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+const total = page.total;
+---
+
+<BaseLayout
+  title={page.currentPage === 1 ? 'All listings' : `All listings — page ${page.currentPage}`}
+  description={`Every plant on Weeds of Melbourne — ${total} ${pluralise(total, 'listing')}, alphabetically by common name.`}
+  path={page.currentPage === 1 ? '/all/' : `/all/${page.currentPage}/`}
+  nav="all"
+  noindex={page.currentPage > 1}
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">Everything on the site</p>
+      <h1>All listings</h1>
+      <p class="label">
+        <span class="count">{total}</span> {pluralise(total, 'plant')}, alphabetically ·
+        page {page.currentPage} of {page.lastPage}
+      </p>
+    </section>
+
+    <section class="section">
+      <CardGrid listings={page.data} empty="No listings have been imported yet." />
+      <Pager page={page} label="All listings pagination" />
+    </section>
+  </div>
+</BaseLayout>

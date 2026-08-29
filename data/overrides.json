@@ -1,0 +1,8 @@
+{
+  "_readme": {
+    "what": "Hand corrections, keyed by listing slug, merged over data/listings.json at build time.",
+    "why": "So re-running `npm run import` never quietly undoes a manual fix.",
+    "how": "Add a slug key with only the fields you are correcting, e.g. { \"caltrop-tribulus-terrestris\": { \"binomial\": \"Tribulus terrestris\" } }. Keys starting with _ are ignored.",
+    "note": "Arrays and objects replace wholesale rather than merging element-by-element."
+  }
+}

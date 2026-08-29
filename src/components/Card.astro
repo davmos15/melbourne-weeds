@@ -1,0 +1,38 @@
+---
+import type { Listing } from '../lib/types.ts';
+import { altFor } from '../lib/format.ts';
+import { asset, listingUrl } from '../lib/url.ts';
+
+interface Props {
+  listing: Listing;
+  /** The first row of a grid can afford to load eagerly; the rest cannot. */
+  eager?: boolean;
+}
+
+const { listing, eager = false } = Astro.props;
+const lead = listing.gallery[0];
+const alt = lead ? altFor(listing.common, listing.binomial, lead.alt) : '';
+---
+
+<a class="card" href={listingUrl(listing.slug)}>
+  <span
+    class="card-media"
+    style={lead?.blur ? `background-image:url(${lead.blur})` : undefined}
+  >
+    {lead && (
+      <picture>
+        <source type="image/avif" srcset={asset(`${lead.src}-400.avif`)} />
+        <img
+          src={asset(`${lead.src}-400.webp`)}
+          alt={alt}
+          width="400"
+          height="400"
+          loading={eager ? 'eager' : 'lazy'}
+          decoding={eager ? 'sync' : 'async'}
+        />
+      </picture>
+    )}
+  </span>
+  <span class="card-name">{listing.common}</span>
+  {listing.binomial && <span class="card-bi">{listing.binomial}</span>}
+</a>

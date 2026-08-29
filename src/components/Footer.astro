@@ -1,0 +1,20 @@
+---
+import { u } from '../lib/url.ts';
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="wrap">
+    <nav aria-label="Secondary">
+      <a href={u('/all/')}>All listings</a>
+      <a href={u('/tree/')}>Classification</a>
+      <a href={u('/about/')}>About</a>
+      <a href={u('/references/')}>References</a>
+      <a href={u('/contact/')}>Contact</a>
+    </nav>
+    <p>
+      A visual glossary of the naturalised and weedy flora of Melbourne.
+      Photographs and text © Adi, {year}.
+    </p>
+  </div>
+</footer>

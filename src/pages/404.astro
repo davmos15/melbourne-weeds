@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { u } from '../lib/url.ts';
+---
+
+<BaseLayout
+  title="Not found"
+  description="That page is not on Weeds of Melbourne."
+  path="/404.html"
+  noindex
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">404</p>
+      <h1>Nothing grows here</h1>
+      <p class="measure">
+        That address is not on the site. It may have been a plant that has since
+        been renamed — try a search, or browse from the habitats.
+      </p>
+      <p class="links">
+        <a class="button" href={u('/')}>Home</a>
+        <a class="button button--quiet" href={u('/all/')}>All listings</a>
+        <a class="button button--quiet" href={u('/tree/')}>Classification</a>
+      </p>
+    </section>
+  </div>
+</BaseLayout>

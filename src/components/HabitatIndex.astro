@@ -1,0 +1,59 @@
+---
+import type { Listing } from '../lib/types.ts';
+import { HABITATS } from '../lib/habitats.ts';
+import { pluralise } from '../lib/format.ts';
+import { asset, habitatUrl } from '../lib/url.ts';
+
+interface Props { listings: Listing[] }
+const { listings } = Astro.props;
+
+/*
+ * SPEC §6 — "Where you found it" is the home page's real content: the old
+ * dropdown menu made visual. Counts and mosaics are derived, so they follow
+ * the data. A habitat with nothing in it still gets a tile showing zero.
+ */
+const tiles = HABITATS.map((habitat) => {
+  const inHabitat = listings.filter((l) => l.habitats.includes(habitat.slug));
+  return {
+    habitat,
+    count: inHabitat.length,
+    mosaic: inHabitat.filter((l) => l.gallery.length > 0).slice(0, 4),
+  };
+});
+---
+
+<div class="habitats">
+  {tiles.map(({ habitat, count, mosaic }) => (
+    <a class="habitat" href={habitatUrl(habitat.slug)}>
+      <span>
+        <span class="habitat-head">
+          <span class="habitat-name">{habitat.label}</span>
+          <span class="count">{count}</span>
+        </span>
+        <span class="habitat-desc">{habitat.description}</span>
+      </span>
+      <span class="mosaic" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, i) => {
+          const listing = mosaic[i];
+          const lead = listing?.gallery[0];
+          return lead ? (
+            <img
+              src={asset(`${lead.src}-400.webp`)}
+              alt=""
+              width="200"
+              height="200"
+              loading="lazy"
+              decoding="async"
+              style={lead.blur ? `background-image:url(${lead.blur});background-size:cover` : undefined}
+            />
+          ) : (
+            <span class="blank"></span>
+          );
+        })}
+      </span>
+      <span class="visually-hidden">
+        {count} {pluralise(count, 'listing')} in {habitat.label}
+      </span>
+    </a>
+  ))}
+</div>

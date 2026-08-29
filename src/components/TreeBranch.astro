@@ -1,0 +1,43 @@
+---
+import type { TreeNode } from '../lib/tree.ts';
+import { rankLabel } from '../lib/tree.ts';
+import { treeUrl } from '../lib/url.ts';
+
+interface Props { node: TreeNode }
+const { node } = Astro.props;
+
+const hasChildren = node.children.length > 0;
+const count = node.listings.length;
+const isSpecies = node.rank === 'species';
+---
+
+<li>
+  {hasChildren ? (
+    <details>
+      <summary class="tree-row">
+        <span class="tree-toggle" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <a class="tree-link" href={treeUrl(node.slug)}>
+          <span class="tree-name" style={isSpecies ? 'font-style:italic' : undefined}>{node.name}</span>
+          <span class="tree-rank">{rankLabel(node.rank)}</span>
+        </a>
+        <span class="count">{count}</span>
+      </summary>
+      <ul>
+        {node.children.map((child) => <Astro.self node={child} />)}
+      </ul>
+    </details>
+  ) : (
+    <div class="tree-row">
+      <span class="tree-toggle tree-toggle--leaf" aria-hidden="true"></span>
+      <a class="tree-link" href={treeUrl(node.slug)}>
+        <span class="tree-name" style={isSpecies ? 'font-style:italic' : undefined}>{node.name}</span>
+        <span class="tree-rank">{rankLabel(node.rank)}</span>
+      </a>
+      <span class="count">{count}</span>
+    </div>
+  )}
+</li>

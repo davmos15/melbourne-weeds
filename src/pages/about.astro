@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getListings } from '../lib/listings.ts';
+import { u } from '../lib/url.ts';
+
+const listings = getListings();
+
+/*
+ * PLACEHOLDER COPY. The real text is on weedsofmelbourne.org/about and could
+ * not be fetched during the build (see MIGRATION.md) — replace the paragraphs
+ * below with Adi's own words before this goes live.
+ */
+---
+
+<BaseLayout
+  title="About"
+  description="Weeds of Melbourne is a visual glossary of the naturalised and weedy flora of Melbourne."
+  path="/about/"
+  nav="about"
+>
+  <div class="wrap">
+    <section class="hero">
+      <p class="label">About</p>
+      <h1>Weeds of Melbourne</h1>
+    </section>
+
+    <section class="section">
+      <div class="prose measure">
+        <p class="lede">
+          Weeds of Melbourne is a visual glossary of the naturalised and weedy
+          flora of this city — the plants that arrived by accident or on purpose
+          and stayed.
+        </p>
+        <p>
+          Every listing is a plant photographed where it was found: in a footpath
+          crack, on a rail embankment, along a creek, against a back fence. Each
+          carries a short essay on how the species came to be here, where it sits
+          taxonomically, and the habitats it turns up in around Melbourne.
+        </p>
+        <p>
+          There are {listings.length} listings. They can be browsed by
+          <a href={u('/')}>habitat</a>, followed down the
+          <a href={u('/tree/')}>classification</a> from class to species, or
+          searched from the field at the top of any page.
+        </p>
+        <p>
+          “Weed” is a judgement about place rather than a botanical category. A
+          few of the plants here are indigenous to this country and simply
+          behave like colonisers; they are filed under
+          <a href={u('/where/native/')}>Native weeds?</a>, question mark
+          included.
+        </p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>

@@ -1,0 +1,48 @@
+---
+import type { TreeNode } from '../lib/tree.ts';
+import TreeBranch from './TreeBranch.astro';
+
+interface Props {
+  nodes: TreeNode[];
+  /** Rendered as the id root for the expand-all control. */
+  id?: string;
+  controls?: boolean;
+}
+
+const { nodes, id = 'tree', controls = true } = Astro.props;
+---
+
+<div class="tree" id={id}>
+  {controls && (
+    <p class="tree-controls">
+      {/* Hidden until the enhancement below unhides it: without scripting the
+          per-branch disclosures still work, but "expand all" cannot. */}
+      <button type="button" class="button button--quiet" data-tree-toggle-all aria-expanded="false" hidden>
+        Expand all
+      </button>
+    </p>
+  )}
+  <ul>
+    {nodes.map((node) => <TreeBranch node={node} />)}
+  </ul>
+</div>
+
+<script>
+  /*
+   * Progressive enhancement for the single "Expand all / Collapse all"
+   * control (SPEC §6). The tree itself is native <details> disclosures, so
+   * it is collapsed by default and fully operable with no JavaScript at all
+   * — this is not a third island, it is one button.
+   */
+  document.querySelectorAll<HTMLButtonElement>('[data-tree-toggle-all]').forEach((button) => {
+    const tree = button.closest('.tree');
+    if (!tree) return;
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      const expand = button.getAttribute('aria-expanded') !== 'true';
+      tree.querySelectorAll('details').forEach((d) => { d.open = expand; });
+      button.setAttribute('aria-expanded', String(expand));
+      button.textContent = expand ? 'Collapse all' : 'Expand all';
+    });
+  });
+</script>
