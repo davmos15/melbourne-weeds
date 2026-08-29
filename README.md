@@ -51,7 +51,15 @@ npm run images -- --media=/path/to/uploads
 ## Deploying
 
 `.github/workflows/deploy.yml` builds on push to `main` and publishes to GitHub
-Pages. Two repository variables control the published URL:
+Pages.
+
+**One-time setup:** in the repository's **Settings → Pages → Build and
+deployment**, set **Source** to **GitHub Actions**. Until that is done the
+build succeeds but the deploy step fails with "Get Pages site failed". It
+cannot be automated — creating a Pages site needs a permission the workflow
+token is not granted.
+
+Two repository variables control the published URL:
 
 | Variable | Default | Notes |
 |---|---|---|

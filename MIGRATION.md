@@ -132,6 +132,16 @@ Useful flags:
 
 ---
 
+## Also waiting on a person
+
+**GitHub Pages is not switched on yet.** The deploy workflow builds fine and
+then fails at `configure-pages`. Fix it once, in **Settings → Pages → Build and
+deployment → Source: GitHub Actions**. This cannot be done from the workflow:
+creating a Pages site needs `administration: write`, which `GITHUB_TOKEN` never
+has, so `enablement: true` fails with "Resource not accessible by integration".
+
+---
+
 ## Also waiting on the source site
 
 `/about/`, `/references/` and `/contact/` carry **placeholder copy**, marked

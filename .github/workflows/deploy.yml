@@ -39,11 +39,12 @@ jobs:
       # Builds the two search indexes, then the static site.
       - run: npm run build
 
-      # enablement: true turns Pages on the first time this runs, so the repo
-      # does not have to be configured by hand before the first deploy.
+      # This step fails until Pages is switched on for the repository:
+      # Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+      # It is a one-time manual step. `enablement: true` cannot substitute for
+      # it — creating a Pages site needs administration:write, which GITHUB_TOKEN
+      # is not granted and the permissions: block above cannot ask for.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
