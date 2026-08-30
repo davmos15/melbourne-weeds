@@ -4,6 +4,7 @@ import fontFaces from '../styles/fonts.css?raw';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { u } from '../lib/url.ts';
+import { DEMO } from '../lib/site.ts';
 
 interface Props {
   title: string;
@@ -52,7 +53,9 @@ const fullTitle = title === 'Weeds of Melbourne' ? title : `${title} — Weeds o
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    {noindex && <meta name="robots" content="noindex" />}
+    {/* Demo mode keeps the whole site out of search while permission is
+        pending, so it cannot rank against the site it is a copy of. */}
+    {(noindex || DEMO) && <meta name="robots" content="noindex, nofollow" />}
 
     <meta property="og:site_name" content="Weeds of Melbourne" />
     <meta property="og:type" content={ogType} />

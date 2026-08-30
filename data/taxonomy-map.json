@@ -1,0 +1,8 @@
+{
+  "fromNesting": {
+    "taxonomy": "classification",
+    "ranks": ["class", "superorder", "order", "family", "genus", "species"]
+  },
+  "habitatTaxonomy": "post_tag",
+  "postType": "posts"
+}

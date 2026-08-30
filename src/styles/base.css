@@ -272,6 +272,8 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
 }
 .footer nav { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); margin-bottom: var(--s-3); }
 .footer nav a { min-height: 44px; display: inline-flex; align-items: center; }
+.footer .attribution { margin-top: var(--s-3); max-width: 46rem; }
+.footer .attribution a { color: inherit; }
 
 /* ------------------------------------------------------------------- hero */
 

@@ -1,6 +1,6 @@
 ---
 import { u } from '../lib/url.ts';
-const year = new Date().getFullYear();
+import { DEMO, SOURCE_SITE, SOURCE_URL } from '../lib/site.ts';
 ---
 
 <footer class="footer">
@@ -14,7 +14,14 @@ const year = new Date().getFullYear();
     </nav>
     <p>
       A visual glossary of the naturalised and weedy flora of Melbourne.
-      Photographs and text © Adi, {year}.
     </p>
+    {DEMO && (
+      <p class="attribution">
+        <strong>Unofficial rebuild.</strong> All photographs and text are the work of
+        <a href={SOURCE_URL} rel="noopener noreferrer external">{SOURCE_SITE}</a>
+        and remain their copyright, reproduced here without their endorsement while
+        this rebuild is shown to them. Not affiliated with {SOURCE_SITE}.
+      </p>
+    )}
   </div>
 </footer>
