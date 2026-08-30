@@ -337,7 +337,12 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
   text-transform: uppercase;
 }
 .habitat:hover .habitat-name { color: var(--bloom); }
-.habitat-desc { color: var(--ink-2); font-size: var(--t-small); margin-top: var(--s-1); }
+.habitat-desc {
+  display: block; /* a <span>: margin-top would otherwise do nothing */
+  color: var(--ink-2);
+  font-size: var(--t-small);
+  margin-top: var(--s-1);
+}
 
 .mosaic {
   display: grid;
@@ -434,6 +439,15 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
 @media (min-width: 1000px) { .grid { grid-template-columns: repeat(4, 1fr); gap: var(--s-5) var(--s-4); } }
 
 .card { text-decoration: none; display: block; }
+
+/* These are all <span>s inside the card's <a>, so they need blockifying:
+   aspect-ratio and vertical margins have no effect on an inline box, which
+   left every grid tile at its photograph's own aspect and ran the name into
+   the row below. */
+.card-media,
+.card-name,
+.card-bi { display: block; }
+
 .card-media {
   position: relative;
   aspect-ratio: 1;
