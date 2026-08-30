@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { DEMO, SOURCE_SITE, SOURCE_URL } from '../lib/site.ts';
 
 /*
- * PLACEHOLDER COPY. The live site's reference list could not be fetched
- * during the build (see MIGRATION.md). The links below are the standing
- * sources each listing already deep-links into; replace this list with Adi's
- * own bibliography before launch.
+ * These are the standing sources every listing already deep-links into, not a
+ * bibliography copied from the source site. The plant descriptions themselves
+ * carry whatever citations their author gave them.
  */
 const sources = [
   { name: 'VicFlora', href: 'https://vicflora.rbg.vic.gov.au/', note: 'Flora of Victoria, Royal Botanic Gardens Victoria — the standing authority for names and distributions used here.' },
@@ -30,6 +30,13 @@ const sources = [
         These are the standing sources; anything specific to one plant is cited
         in its own text.
       </p>
+      {DEMO && (
+        <p class="measure">
+          The plant descriptions and photographs on this site are the work of
+          <a href={SOURCE_URL} rel="noopener noreferrer external">{SOURCE_SITE}</a>
+          and remain their copyright. This rebuild reproduces them unaltered.
+        </p>
+      )}
     </section>
 
     <section class="section">

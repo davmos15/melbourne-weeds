@@ -1,17 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-/*
- * PLACEHOLDER COPY. The live site's contact details could not be fetched
- * during the build (see MIGRATION.md) — put Adi's real address and handle in
- * before launch. There is no form: the site is static, so a form would need a
- * third-party endpoint.
- */
+import { DEMO, SOURCE_SITE, SOURCE_URL } from '../lib/site.ts';
 ---
 
 <BaseLayout
   title="Contact"
-  description="Get in touch about Weeds of Melbourne — corrections, identifications and requests."
+  description={`How to get in touch about this rebuild, and where to find the original ${SOURCE_SITE}.`}
   path="/contact/"
 >
   <div class="wrap">
@@ -22,16 +16,42 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <section class="section">
       <div class="prose measure">
-        <p class="lede">
-          Corrections are welcome — a misapplied name, a better identification,
-          a plant that should be here and is not.
-        </p>
-        <p>
-          The quickest way is a message on Instagram, where most of these
-          photographs are posted first. Include the listing’s address if you are
-          writing about a particular plant; it is shown under the title on every
-          page and there is a copy button beside it.
-        </p>
+        {DEMO ? (
+          <Fragment>
+            <p class="lede">
+              This site is an unofficial rebuild. There are two different things
+              you might want, and they go to different places.
+            </p>
+            <h2>About a plant</h2>
+            <p>
+              Corrections to an identification, a name, or anything in a plant’s
+              description belong with
+              <a href={SOURCE_URL} rel="noopener noreferrer external">{SOURCE_SITE}</a>,
+              whose work all of it is. We have not changed a word of it and are
+              not in a position to correct it.
+            </p>
+            <h2>About this rebuild</h2>
+            <p>
+              Anything about the site itself — a page that renders badly, a
+              search that misses something obvious, a broken address — is ours.
+              The quickest route is an issue on the repository this is built
+              from; the address of any listing is shown under its title, with a
+              button to copy it.
+            </p>
+          </Fragment>
+        ) : (
+          <Fragment>
+            <p class="lede">
+              Corrections are welcome — a misapplied name, a better
+              identification, a plant that should be here and is not.
+            </p>
+            <p>
+              Include the listing’s address if you are writing about a
+              particular plant; it is shown under the title on every page and
+              there is a button to copy it.
+            </p>
+          </Fragment>
+        )}
       </div>
     </section>
   </div>

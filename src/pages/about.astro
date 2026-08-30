@@ -1,56 +1,80 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getListings } from '../lib/listings.ts';
+import { DEMO, SOURCE_SITE, SOURCE_URL } from '../lib/site.ts';
 import { u } from '../lib/url.ts';
 
 const listings = getListings();
-
-/*
- * PLACEHOLDER COPY. The real text is on weedsofmelbourne.org/about and could
- * not be fetched during the build (see MIGRATION.md) — replace the paragraphs
- * below with Adi's own words before this goes live.
- */
+const habitats = new Set(listings.flatMap((l) => l.habitats));
 ---
 
 <BaseLayout
   title="About"
-  description="Weeds of Melbourne is a visual glossary of the naturalised and weedy flora of Melbourne."
+  description={`An unofficial rebuild of ${SOURCE_SITE} — the same ${listings.length} plants, a new front end built for phones.`}
   path="/about/"
   nav="about"
 >
   <div class="wrap">
     <section class="hero">
       <p class="label">About</p>
-      <h1>Weeds of Melbourne</h1>
+      <h1>About this rebuild</h1>
     </section>
 
     <section class="section">
       <div class="prose measure">
-        <p class="lede">
-          Weeds of Melbourne is a visual glossary of the naturalised and weedy
-          flora of this city — the plants that arrived by accident or on purpose
-          and stayed.
+        {DEMO ? (
+          <Fragment>
+            <p class="lede">
+              This is an unofficial rebuild of
+              <a href={SOURCE_URL} rel="noopener noreferrer external">{SOURCE_SITE}</a>,
+              made to show what that collection looks like on a different front end.
+            </p>
+            <p>
+              Every photograph and every word of the plant descriptions is the work of
+              the people behind {SOURCE_SITE} and remains their copyright. Nothing here
+              has been written or photographed by us, and this site is not affiliated
+              with theirs or endorsed by them. It exists to be shown to them.
+            </p>
+            <p>
+              Because of that it asks search engines not to index it. If you have
+              arrived here looking for the real thing, it is at
+              <a href={SOURCE_URL} rel="noopener noreferrer external">{SOURCE_SITE}</a>.
+            </p>
+            <h2>What is different</h2>
+          </Fragment>
+        ) : (
+          <p class="lede">
+            A visual glossary of the naturalised and weedy flora of Melbourne —
+            {' '}{listings.length} plants, photographed where they were found.
+          </p>
+        )}
+        <p>
+          The front end is built for a phone first. Every plant has its own
+          address that can be pasted into a message and opened cold. There is a
+          search field on every page that matches common names, botanical names,
+          any rank from class to species, habitat, and the text of the
+          descriptions themselves.
         </p>
         <p>
-          Every listing is a plant photographed where it was found: in a footpath
-          crack, on a rail embankment, along a creek, against a back fence. Each
-          carries a short essay on how the species came to be here, where it sits
-          taxonomically, and the habitats it turns up in around Melbourne.
+          The home page is the index rather than a feed: the
+          {' '}{habitats.size} habitats these plants turn up in, and the full
+          classification, both built from the listings themselves so they can
+          never drift out of step. The photographs on each listing are a gallery
+          you can swipe through and open full screen.
         </p>
         <p>
-          There are {listings.length} listings. They can be browsed by
-          <a href={u('/')}>habitat</a>, followed down the
-          <a href={u('/tree/')}>classification</a> from class to species, or
-          searched from the field at the top of any page.
-        </p>
-        <p>
-          “Weed” is a judgement about place rather than a botanical category. A
-          few of the plants here are indigenous to this country and simply
-          behave like colonisers; they are filed under
-          <a href={u('/where/native/')}>Native weeds?</a>, question mark
-          included.
+          It is a static site — no database, no server — so it is fast on a
+          patchy mobile connection and costs nothing to host.
         </p>
       </div>
+    </section>
+
+    <section class="section">
+      <p class="hero links">
+        <a class="button" href={u('/')}>Browse by habitat</a>
+        <a class="button button--quiet" href={u('/tree/')}>Full classification</a>
+        <a class="button button--quiet" href={u('/all/')}>All {listings.length} listings</a>
+      </p>
     </section>
   </div>
 </BaseLayout>
