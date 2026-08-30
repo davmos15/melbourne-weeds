@@ -39,6 +39,14 @@ const siblings = genus
   : [];
 
 const lead = listing.gallery[0];
+// Must match the <picture> in Gallery.astro exactly, or the browser fetches twice.
+const preload = lead
+  ? {
+      type: 'image/avif',
+      sizes: '(min-width: 1000px) 60rem, 100vw',
+      srcset: `${asset(`${lead.src}-900.avif`)} 900w, ${asset(`${lead.src}-1600.avif`)} 1600w`,
+    }
+  : undefined;
 const site = Astro.site ?? new URL('https://weedsofmelbourne.org');
 const canonical = new URL(listingUrl(listing.slug), site).href;
 
@@ -59,6 +67,7 @@ if (listing.instagram) {
   image={lead ? asset(`${lead.src}-900.webp`) : undefined}
   imageAlt={`${listing.common} (${listing.binomial})`}
   ogType="article"
+  preload={preload}
 >
   <article class="wrap listing">
     <Gallery images={listing.gallery} common={listing.common} binomial={listing.binomial} />

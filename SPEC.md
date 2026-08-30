@@ -552,7 +552,35 @@ else follows the spec as written.
    for them to check first. Exact rank names are matched before substrings, so
    `order` cannot claim the `superorder` taxonomy.
 
-11. **Recon, import and images each accept an offline source** — a WordPress
+11. **Measured against §12's bars** (Lighthouse, mobile, simulated slow 4G,
+    fixture content, 30 August 2026):
+
+    | Page | LCP | CLS | Verdict |
+    |---|---|---|---|
+    | Home | 1.59 s | 0.033 | pass |
+    | Listing | **2.71 s** | 0.005 | **LCP misses 2.5 s** |
+    | All listings | 2.11 s | 0.048 | pass, CLS close to the line |
+    | Tree | 1.35 s | 0.010 | pass |
+
+    CLS passes everywhere. The listing page misses LCP, and the cause is
+    measured rather than guessed: removing the webfonts entirely takes the same
+    page from 2.71 s to 1.58 s. The eight faces §9's type system needs are
+    185 KB, and on a simulated 4G link that delays the paint.
+
+    Three fixes were tried. Preloading the LCP image helped and is kept (home
+    2.06 → 1.59 s). Subsetting the faces to the glyph set the content uses did
+    not — Google's stock latin subset is already that tight (185 KB vs 180 KB).
+    `font-display: optional` did not either: LCP unchanged and FCP notably
+    worse, so §9's `swap` stands.
+
+    What remains is the face count, and that is §9's design rather than an
+    implementation detail. Dropping Spectral 300 and 300-italic — using 400 for
+    the binomial, lede and hero line — measures 2.49 s, which clears the bar
+    but only just. That is a design decision, so it has not been taken
+    unilaterally. `scripts/fonts.ts` takes `WEEDS_FONT_DISPLAY` if the
+    trade-off is ever revisited.
+
+12. **Recon, import and images each accept an offline source** — a WordPress
    `Tools → Export` file (`--wxr=`) and a local `uploads/` tree (`--media=`) —
    because §4's three phases are otherwise unrunnable whenever the live site is
    unreachable, which is the situation this build was done in.
