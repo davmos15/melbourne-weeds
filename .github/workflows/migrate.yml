@@ -8,12 +8,17 @@ name: Migrate content
 # Reading published posts through /wp-json/wp/v2/ needs no credentials — it is
 # the same content the site serves to any visitor. Nothing here writes to the
 # source site.
+#
+# ON HOLD: the `recon` phase reads public metadata and copies nothing, and is
+# fine to run. The `import` and `images` phases copy the source site's essays
+# and photographs, and that site is not ours — do not run them until its owner
+# has agreed. See the status block at the top of MIGRATION.md.
 
 on:
   workflow_dispatch:
     inputs:
       phase:
-        description: 'Which migration phase to run'
+        description: 'Which phase (import and images copy content — see MIGRATION.md)'
         type: choice
         default: recon
         options:

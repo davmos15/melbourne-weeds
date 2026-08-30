@@ -8,6 +8,12 @@ habitat tags.
 The content belongs to Adi (the site's author). We are rebuilding the front
 end and migrating his existing WordPress content into it.
 
+> **Correction, 30 August 2026.** The paragraph above is wrong.
+> weedsofmelbourne.org belongs to a third party, not to Adi and not to us, and
+> its essays and photographs are their copyright. The content migration is on
+> hold pending the owner's agreement — see `MIGRATION.md`. Everything else in
+> this spec stands.
+
 There is a working single-file prototype (`prototype/weeds-of-melbourne-prototype.html`).
 Treat it as a **design and interaction reference, not a codebase**. Do not port
 its code. Do port its layout, routing model, design tokens and gallery
@@ -526,18 +532,27 @@ else follows the spec as written.
    repository, so §8's behaviour spec and §9's tokens were implemented from the
    spec text directly.
 
-7. **Phase 0 recon could not be run.** `weedsofmelbourne.org` is not reachable
+7. **Phase 0 recon has now been run**, from a GitHub Actions runner rather than
+   the build sandbox. 232 listings; the rank chain is case 2 — one hierarchical
+   taxonomy (`classification`) carrying the whole chain by nesting. The
+   importer resolves it from the terms' parent links. See `MIGRATION.md`.
+
+8. **The content copy is on hold.** The source site is not ours. `import` and
+   `images` are complete and tested but must not be run against it until its
+   owner agrees.
+
+9. **Phase 0 recon could not be run from the build sandbox.** `weedsofmelbourne.org` is not reachable
    from the build environment. See `MIGRATION.md` — the rank-chain question is
    still open, and the importer is deliberately left unconfigured rather than
    guessing at it.
 
-8. **The rank mapping is configuration, not a constant in the importer.**
+10. **The rank mapping is configuration, not a constant in the importer.**
    §4 says to report and stop for a decision. `data/taxonomy-map.json` does not
    exist until a human puts it there; recon writes a suggestion to `data/raw/`
    for them to check first. Exact rank names are matched before substrings, so
    `order` cannot claim the `superorder` taxonomy.
 
-9. **Recon, import and images each accept an offline source** — a WordPress
+11. **Recon, import and images each accept an offline source** — a WordPress
    `Tools → Export` file (`--wxr=`) and a local `uploads/` tree (`--media=`) —
    because §4's three phases are otherwise unrunnable whenever the live site is
    unreachable, which is the situation this build was done in.

@@ -1,12 +1,25 @@
 # Weeds of Melbourne
 
-A visual glossary of the naturalised and weedy flora of Melbourne — roughly 400
-plants, each with photographs, an essay, a taxonomic placement and habitat tags.
-The content is Adi's; this repo is the front end and the migration of his
-WordPress site into it.
+A visual glossary of the naturalised and weedy flora of Melbourne — 232 plants,
+each with photographs, an essay, a taxonomic placement and habitat tags.
 
 **`SPEC.md` is the source of truth.** Read it before changing anything
 structural. `MIGRATION.md` covers the WordPress import and its current state.
+
+## The content is not ours — the copy is on hold
+
+`SPEC.md`'s preamble says the content belongs to Adi and that we are migrating
+his site. **That is not the case.** weedsofmelbourne.org belongs to a third
+party. Its 232 essays and its photographs are their copyright.
+
+**Do not run `npm run import` or `npm run images` against it, and do not run
+the `import` or `images` phases of the Migrate workflow**, until the owner has
+agreed. Decided 30 August 2026: evaluate locally first, approach the owner if
+the rebuild proves worth it.
+
+`npm run recon` is fine — it reads public metadata and copies no content.
+Species names, binomials, the rank chain and habitat tags are facts and not
+copyrightable; the essays and photographs are neither.
 
 ## The seven things that are not negotiable
 

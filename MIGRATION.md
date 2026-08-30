@@ -1,16 +1,33 @@
 # Content migration — status and runbook
 
-The front end is complete and builds. **No WordPress content has been imported
-yet**, because the source site is not reachable from the build environment.
-There are now two routes in, and the offline one needs no network access at
-all.
+> ## Status: on hold, deliberately
+>
+> The front end is complete and builds. **No content has been imported, and
+> none should be yet.**
+>
+> weedsofmelbourne.org belongs to a third party — not to us, and not to Adi.
+> Its 232 essays and its photographs are their copyright, and the `import` and
+> `images` phases exist to copy them wholesale onto a site we publish.
+>
+> **Do not run those two phases until the owner has agreed.** Decided
+> 30 August 2026: evaluate the rebuild locally first, and approach the owner if
+> it proves worth doing.
+>
+> `recon` is fine to run — it reads public metadata and copies no content. The
+> tooling below is complete and tested, and is documented so it is ready the
+> day there is an answer.
+>
+> Note also that this repository publishes to GitHub Pages, so anything
+> committed to `main` is public. A local-only evaluation means `npm run dev`,
+> not a push.
+
+The migration reads from weedsofmelbourne.org. Three routes in, because that is
+straightforward from most places and impossible from one: the sandbox this repo
+was built in.
 
 ---
 
 ## Why there are three routes
-
-The migration reads from weedsofmelbourne.org. That is straightforward from
-most places and impossible from one: the sandbox this repo was built in.
 
 Outbound HTTPS in this environment goes through a policy-enforcing egress
 proxy, and the source host is not on its allow-list:
