@@ -7,9 +7,10 @@ import { getListings } from '../../lib/listings.ts';
 import { pluralise } from '../../lib/format.ts';
 
 export const getStaticPaths = (({ paginate }) => {
-  // 48 per page: 400 cards at once is too heavy for a phone (SPEC §6).
+  // 24 per page. 48 measured at 3.3 s LCP on a phone once real photographs
+  // were in — the thumbnails alone were 609 KB (SPEC §6, §12).
   // Inlined because Astro hoists getStaticPaths out of the module scope.
-  return paginate(getListings(), { pageSize: 48 });
+  return paginate(getListings(), { pageSize: 24 });
 }) satisfies GetStaticPaths;
 
 const { page } = Astro.props;

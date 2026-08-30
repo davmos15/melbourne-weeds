@@ -16,6 +16,7 @@
  *
  * Derivatives, written as public/img/{slug}/{n}-{size}.{ext}:
  *
+ *   200   AVIF + WebP   lead image only    habitat mosaic tile
  *   400   AVIF + WebP   lead image only    grid thumbnail
  *   900   AVIF + WebP   lead image only    card / listing header
  *   1600  AVIF          every image        gallery + lightbox
@@ -127,6 +128,11 @@ function derivativesFor(isLead: boolean): Derivative[] {
   const all: Derivative[] = [{ size: 1600, format: 'avif' }];
   if (!isLead) return all;
   return [
+    // 200 is for the home page's habitat mosaic, whose cells render at 85 CSS
+    // px on a phone. Serving those the 400px grid thumbnail put ~760 KB of
+    // images on the home page for 36 tiles.
+    { size: 200, format: 'avif' },
+    { size: 200, format: 'webp' },
     { size: 400, format: 'avif' },
     { size: 400, format: 'webp' },
     { size: 900, format: 'avif' },

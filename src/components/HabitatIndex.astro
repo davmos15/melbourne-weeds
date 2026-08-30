@@ -36,9 +36,15 @@ const tiles = HABITATS.map((habitat) => {
         {Array.from({ length: 4 }, (_, i) => {
           const listing = mosaic[i];
           const lead = listing?.gallery[0];
+          // A mosaic cell is ~85 CSS px on a phone and ~190 on desktop, so the
+          // 400px grid thumbnail is far more than it needs — 36 of them put
+          // ~760 KB on the home page. WebP beats AVIF at these sizes here,
+          // measured, so there is no <picture> to pick between them.
           return lead ? (
             <img
-              src={asset(`${lead.src}-400.webp`)}
+              src={asset(`${lead.src}-200.webp`)}
+              srcset={`${asset(`${lead.src}-200.webp`)} 200w, ${asset(`${lead.src}-400.webp`)} 400w`}
+              sizes="(min-width: 720px) 190px, 25vw"
               alt=""
               width="200"
               height="200"
