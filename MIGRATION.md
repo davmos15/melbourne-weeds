@@ -1,25 +1,18 @@
 # Content migration — status and runbook
 
-> ## Status: on hold, deliberately
+> ## Status: imported and live, permission still outstanding
 >
-> The front end is complete and builds. **No content has been imported, and
-> none should be yet.**
+> All 232 listings and 2,244 photographs are imported and published, as a demo
+> to be shown to the owner of weedsofmelbourne.org.
 >
-> weedsofmelbourne.org belongs to a third party — not to us, and not to Adi.
-> Its 232 essays and its photographs are their copyright, and the `import` and
-> `images` phases exist to copy them wholesale onto a site we publish.
+> **That site is a third party's and they have not agreed to this.** Their
+> photographs and descriptions are their copyright. The site therefore runs in
+> demo mode (`WEEDS_DEMO` in `src/lib/site.ts`): every page is `noindex,
+> nofollow`, `robots.txt` disallows everything, and the footer states plainly
+> that this is an unofficial rebuild reproduced without their endorsement.
 >
-> **Do not run those two phases until the owner has agreed.** Decided
-> 30 August 2026: evaluate the rebuild locally first, and approach the owner if
-> it proves worth doing.
->
-> `recon` is fine to run — it reads public metadata and copies no content. The
-> tooling below is complete and tested, and is documented so it is ready the
-> day there is an answer.
->
-> Note also that this repository publishes to GitHub Pages, so anything
-> committed to `main` is public. A local-only evaluation means `npm run dev`,
-> not a push.
+> Set `WEEDS_DEMO=0` once there is an agreement. If there is not one, the
+> content should come back out — of `main` and of the published site.
 
 The migration reads from weedsofmelbourne.org. Three routes in, because that is
 straightforward from most places and impossible from one: the sandbox this repo

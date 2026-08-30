@@ -552,33 +552,37 @@ else follows the spec as written.
    for them to check first. Exact rank names are matched before substrings, so
    `order` cannot claim the `superorder` taxonomy.
 
-11. **Measured against §12's bars** (Lighthouse, mobile, simulated slow 4G,
-    fixture content, 30 August 2026):
+11. **Measured against §12's bars**, on the real 232 listings and their
+    photographs (Lighthouse, mobile, simulated slow 4G). Run-to-run spread on
+    the same page reaches 1.3 s, so these are medians of three runs — single
+    runs are not decisive and were misleading earlier in this build.
 
     | Page | LCP | CLS | Verdict |
     |---|---|---|---|
-    | Home | 1.59 s | 0.033 | pass |
-    | Listing | **2.71 s** | 0.005 | **LCP misses 2.5 s** |
-    | All listings | 2.11 s | 0.048 | pass, CLS close to the line |
-    | Tree | 1.35 s | 0.010 | pass |
+    | Home | 2.33 s | 0.038 | pass |
+    | Listing | **3.38 s** | 0.004 | **LCP misses 2.5 s** |
+    | All listings | **4.07 s** | 0.007 | **LCP misses 2.5 s** |
 
-    CLS passes everywhere. The listing page misses LCP, and the cause is
-    measured rather than guessed: removing the webfonts entirely takes the same
-    page from 2.71 s to 1.58 s. The eight faces §9's type system needs are
-    185 KB, and on a simulated 4G link that delays the paint.
+    CLS passes everywhere, comfortably.
 
-    Three fixes were tried. Preloading the LCP image helped and is kept (home
-    2.06 → 1.59 s). Subsetting the faces to the glyph set the content uses did
-    not — Google's stock latin subset is already that tight (185 KB vs 180 KB).
-    `font-display: optional` did not either: LCP unchanged and FCP notably
-    worse, so §9's `swap` stands.
+    Fixed along the way: the habitat mosaic was serving the 400 px grid
+    thumbnail into cells that render at 85 CSS px, 36 of them, putting 970 KB
+    on the home page. A 200 px derivative with a srcset took it to 636 KB and
+    under the bar. The LCP image is preloaded, and the two speculative font
+    preloads removed — they were queued ahead of it.
 
-    What remains is the face count, and that is §9's design rather than an
-    implementation detail. Dropping Spectral 300 and 300-italic — using 400 for
-    the binomial, lede and hero line — measures 2.49 s, which clears the bar
-    but only just. That is a design decision, so it has not been taken
-    unilaterally. `scripts/fonts.ts` takes `WEEDS_FONT_DISPLAY` if the
-    trade-off is ever revisited.
+    Not fixed, and not fixable by tweaking: the eight webfont faces §9's type
+    system needs are 185 KB of a 391 KB listing page. Dropping Spectral 300 and
+    300-italic reaches only 3.15 s, so it does not earn the design change.
+    Subsetting the faces to the glyphs used is no smaller than Google's stock
+    latin subset, and `font-display: optional` made FCP worse without moving
+    LCP — both measured.
+
+    This is a real conflict between §9's type system and §12's LCP budget on a
+    throttled connection, not an implementation defect. Closing it means fewer
+    typefaces, or accepting the bar on this network profile. That is a design
+    decision and has been left open. `scripts/fonts.ts` takes
+    `WEEDS_FONT_DISPLAY` if the trade-off is revisited.
 
 12. **Recon, import and images each accept an offline source** — a WordPress
    `Tools → Export` file (`--wxr=`) and a local `uploads/` tree (`--media=`) —

@@ -6,20 +6,21 @@ each with photographs, an essay, a taxonomic placement and habitat tags.
 **`SPEC.md` is the source of truth.** Read it before changing anything
 structural. `MIGRATION.md` covers the WordPress import and its current state.
 
-## The content is not ours — the copy is on hold
+## The content is not ours
 
 `SPEC.md`'s preamble says the content belongs to Adi and that we are migrating
 his site. **That is not the case.** weedsofmelbourne.org belongs to a third
 party. Its 232 essays and its photographs are their copyright.
 
-**Do not run `npm run import` or `npm run images` against it, and do not run
-the `import` or `images` phases of the Migrate workflow**, until the owner has
-agreed. Decided 30 August 2026: evaluate locally first, approach the owner if
-the rebuild proves worth it.
+It is imported and published anyway, as a demo to show them — decided
+30 August 2026. Until they agree, the site runs in **demo mode**
+(`WEEDS_DEMO` in `src/lib/site.ts`): `noindex, nofollow` on every page,
+`robots.txt` disallowing everything, and a footer stating it is an unofficial
+rebuild reproduced without their endorsement. Do not remove any of that, and
+do not set `WEEDS_DEMO=0`, without an agreement.
 
-`npm run recon` is fine — it reads public metadata and copies no content.
 Species names, binomials, the rank chain and habitat tags are facts and not
-copyrightable; the essays and photographs are neither.
+copyrightable. The descriptions and photographs are neither.
 
 ## The seven things that are not negotiable
 
