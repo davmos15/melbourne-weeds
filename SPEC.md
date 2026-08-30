@@ -584,7 +584,19 @@ else follows the spec as written.
     decision and has been left open. `scripts/fonts.ts` takes
     `WEEDS_FONT_DISPLAY` if the trade-off is revisited.
 
-12. **Recon, import and images each accept an offline source** — a WordPress
+12. **Previous/next by date is gone** (§7, item 8). Removed at the site
+    owner's request as superfluous — a listing already reaches its neighbours
+    through its habitats, its genus and the classification tree.
+    `byDateDescending()` went with it, since nothing else used it.
+
+13. **The rank chain is a stepped vertical column, not a breadcrumb** (§7,
+    item 6). A wrapped horizontal breadcrumb reads badly at 360 px once a
+    chain runs to seven levels. It is now one rank per row, each stepped in
+    from the one above with a hairline elbow, so it reads top-down like a
+    taxonomic key. The rank name still sits above each term, as §7 asks, and
+    every level is still a link to its `/tree/` page.
+
+14. **Recon, import and images each accept an offline source** — a WordPress
    `Tools → Export` file (`--wxr=`) and a local `uploads/` tree (`--media=`) —
    because §4's three phases are otherwise unrunnable whenever the live site is
    unreachable, which is the situation this build was done in.

@@ -543,19 +543,43 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
 .prose p:first-child { margin-top: 0; }
 .prose .lede { font-size: 1.1875rem; font-weight: 300; line-height: 1.5; }
 
-/* Where it sits — the rank chain. Rank name above each term is information,
-   not decoration (SPEC §7). */
-.crumb { display: flex; flex-wrap: wrap; gap: var(--s-3); }
-.crumb li { display: flex; align-items: center; gap: var(--s-3); }
+/* Where it sits — the rank chain. One rank per row, each stepped in from the
+   one above, so it reads top-down like a taxonomic key rather than a wrapped
+   breadcrumb. The rank name above each term is information, not decoration
+   (SPEC §7). */
+.crumb {
+  display: grid;
+  --step: 0.7rem;
+}
+
+.crumb li {
+  position: relative;
+  margin-left: calc(var(--depth, 0) * var(--step));
+}
+
+/* A hairline elbow hooking each rank back up to the one above it. */
 .crumb li + li::before {
   content: '';
-  width: 12px;
-  border-top: var(--hair);
-  flex: 0 0 auto;
+  position: absolute;
+  left: calc(var(--step) * -1);
+  top: 0;
+  width: calc(var(--step) - 0.2rem);
+  height: 1.15rem;
+  border-left: var(--hair);
+  border-bottom: var(--hair);
+  border-bottom-left-radius: 3px;
 }
-.crumb a { text-decoration: none; display: block; padding-block: var(--s-1); }
+
+.crumb a {
+  display: block;
+  text-decoration: none;
+  padding-block: var(--s-2);
+  min-height: 44px;
+}
 .crumb a:hover .crumb-term { color: var(--bloom); }
-.crumb-term { font-weight: 600; }
+
+.crumb .label { display: block; }
+.crumb-term { display: block; font-weight: 600; line-height: 1.25; }
 .crumb .species .crumb-term,
 .crumb .subspecies .crumb-term { font-style: italic; }
 
@@ -575,22 +599,8 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
 .links-list a:hover { color: var(--bloom); }
 .links-list .where { font-family: var(--cond); font-size: var(--t-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
 
-.prevnext {
-  display: grid;
-  gap: var(--s-3);
-  margin-top: var(--s-6);
-  padding-top: var(--s-4);
-  border-top: var(--hair);
-}
-.prevnext a { text-decoration: none; display: block; min-height: 44px; }
-.prevnext .dir { display: block; }
-.prevnext .who { font-weight: 600; }
-.prevnext a:hover .who { color: var(--bloom); }
-
 @media (min-width: 720px) {
   .listing { padding-block: var(--s-5) var(--s-8); }
-  .prevnext { grid-template-columns: 1fr 1fr; gap: var(--s-5); }
-  .prevnext .next { text-align: right; }
 }
 
 

@@ -87,11 +87,6 @@ export function listingsInHabitat(habitat: string): Listing[] {
   return getListings().filter((l) => l.habitats.includes(habitat));
 }
 
-/** Newest first — the ordering behind previous/next on a listing page. */
-export function byDateDescending(listings: Listing[] = getListings()): Listing[] {
-  return listings.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.slug.localeCompare(b.slug)));
-}
-
 /** The lead image, which is the WordPress featured image. */
 export function leadImage(listing: Listing) {
   return listing.gallery[0];

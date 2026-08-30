@@ -4,29 +4,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Gallery from '../components/Gallery.astro';
 import Crumb from '../components/Crumb.astro';
 import CardGrid from '../components/CardGrid.astro';
-import { getListings, byDateDescending } from '../lib/listings.ts';
+import { getListings } from '../lib/listings.ts';
 import { getTree, resolvePath, genusOf } from '../lib/tree.ts';
 import { HABITAT_BY_SLUG } from '../lib/habitats.ts';
 import { formatDate } from '../lib/format.ts';
 import { asset, habitatUrl, listingUrl } from '../lib/url.ts';
 
 export const getStaticPaths = (() => {
-  const listings = getListings();
-  const chronological = byDateDescending(listings);
-
-  return chronological.map((listing, i) => ({
+  return getListings().map((listing) => ({
     // The slug comes verbatim from WordPress and is never regenerated, so
     // every existing weedsofmelbourne.org link keeps working (SPEC §2).
     params: { slug: listing.slug },
-    props: {
-      listing,
-      newer: chronological[i - 1] ?? null,
-      older: chronological[i + 1] ?? null,
-    },
+    props: { listing },
   }));
 }) satisfies GetStaticPaths;
 
-const { listing, newer, older } = Astro.props;
+const { listing } = Astro.props;
 const listings = getListings();
 const tree = getTree(listings);
 
@@ -134,20 +127,6 @@ if (listing.instagram) {
           </section>
         )}
 
-        <nav class="prevnext" aria-label="More listings">
-          {older ? (
-            <a class="prev" href={listingUrl(older.slug)}>
-              <span class="label dir">← Earlier</span>
-              <span class="who">{older.common}</span>
-            </a>
-          ) : <span></span>}
-          {newer ? (
-            <a class="next" href={listingUrl(newer.slug)}>
-              <span class="label dir">Later →</span>
-              <span class="who">{newer.common}</span>
-            </a>
-          ) : <span></span>}
-        </nav>
       </div>
     </div>
   </article>

@@ -16,8 +16,11 @@ const { path, label = 'Classification' } = Astro.props;
   path.length > 0 && (
     <nav aria-label={label}>
       <ol class="crumb">
-        {path.map((node) => (
-          <li class={node.rank}>
+        {path.map((node, depth) => (
+          /* --depth steps each rank in from the one above it, so the chain
+             reads as a single top-down column rather than a wrapped
+             breadcrumb. */
+          <li class={node.rank} style={`--depth:${depth}`}>
             <a href={treeUrl(node.slug)}>
               {/* The rank name is real information, not decoration (SPEC §7). */}
               <span class="label">{rankLabel(node.rank)}</span>
