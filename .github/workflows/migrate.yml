@@ -110,9 +110,17 @@ jobs:
             echo '## Phase 1 — import'
             echo
             echo '```'
-            tail -n 120 import.log
+            tail -n 200 import.log
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload import log
+        if: inputs.phase == 'import'
+        uses: actions/upload-artifact@v4
+        with:
+          name: import-log
+          path: import.log
+          retention-days: 30
 
       # --------------------------------------------------------------- images
 
@@ -147,7 +155,11 @@ jobs:
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A data/listings.json public/img
+          # public/img does not exist until the images phase has run, and
+          # `git add` treats a missing pathspec as a fatal error.
+          for path in data/listings.json public/img; do
+            [ -e "$path" ] && git add -A "$path"
+          done
           if git diff --cached --quiet; then
             echo "::notice::Nothing changed."
             exit 0
