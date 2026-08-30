@@ -166,5 +166,10 @@ jobs:
           fi
           git checkout -B "${{ inputs.branch }}"
           git commit -m "Migrate: ${{ inputs.phase }} from ${WP_SOURCE}"
-          git push -u origin "${{ inputs.branch }}" --force-with-lease
+          # Plain --force, not --force-with-lease: the runner checks out the
+          # dispatch ref and never fetches this branch, so a lease has nothing
+          # to compare against and is rejected as stale. The branch is
+          # regenerated output owned by this workflow, so overwriting it is the
+          # intended behaviour — the reviewed content lives on main.
+          git push -u origin "${{ inputs.branch }}" --force
           echo "Pushed to \`${{ inputs.branch }}\`." >> "$GITHUB_STEP_SUMMARY"
