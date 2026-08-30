@@ -97,6 +97,48 @@ tree for exactly that purpose.
 
 ---
 
+## What recon actually found
+
+Run on 30 August 2026 against `https://weedsofmelbourne.org`
+(Actions → Migrate content → phase `recon`):
+
+| | |
+|---|---|
+| Listings | **232** published posts — not the ~400 the spec estimated |
+| Rank chain | **Case 2.** One hierarchical taxonomy, `classification` ("Plant classification"), ~1000 terms, carrying the whole chain by nesting |
+| Habitat tags | All nine expected slugs present (`paddockweeds`, `crackplants`, …) |
+| Images | In `wp-content/uploads/`, linked in body content at `-300x300` and other resized sizes |
+
+A sample post's `classification` terms are `magnoliopsida, rosanae, tribulus,
+tribulus-terrestris, zygophyllaceae, zygophyllales` — the full chain from class
+to species, returned unordered. The order comes from the terms' parent links.
+
+`data/taxonomy-map.json` for this source is therefore:
+
+```json
+{
+  "fromNesting": {
+    "taxonomy": "classification",
+    "ranks": ["class", "superorder", "order", "family", "genus", "species"]
+  },
+  "habitatTaxonomy": "post_tag",
+  "postType": "posts"
+}
+```
+
+The importer walks each listing's parent links to order the chain, then labels
+it from the species end backwards, with the root always taking the topmost rank.
+That is what makes a chain that skips superorder — ferns and conifers — still
+land its order, family, genus and species correctly. Verified against fixtures:
+5-level chains come out `class > order > family > genus > species` and 6-level
+ones `class > superorder > order > family > genus > species`.
+
+Rank labels are cross-checked against botanical suffix conventions (`-opsida`,
+`-anae`, `-ales`, `-aceae`). That decides nothing — the order comes from the
+data — but anything it disagrees with is named in the validation report.
+
+---
+
 ## The open question — do not guess it
 
 SPEC §4 Phase 0 is explicit: report what the source contains and stop for a

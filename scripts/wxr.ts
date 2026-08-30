@@ -53,8 +53,13 @@ function list(value: unknown): Node[] {
 function text(value: unknown): string {
   if (value === undefined || value === null) return '';
   if (typeof value === 'object') {
-    const t = (value as Node)['#text'];
-    return t === undefined ? '' : String(t);
+    const node = value as Node;
+    // WordPress wraps most human-readable values in CDATA, so that has to be
+    // checked before #text or every term name comes back empty.
+    const cdata = node.__cdata;
+    if (cdata !== undefined) return String(cdata);
+    const plain = node['#text'];
+    return plain === undefined ? '' : String(plain);
   }
   return String(value);
 }

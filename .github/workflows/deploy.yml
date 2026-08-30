@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # SPEC §2/§14 — the published URL and base path come from repository
-      # variables, never from a hardcoded value in the source. Set SITE_URL to
-      # the custom domain (or https://<user>.github.io/<repo>) and, only if the
-      # site is served from a subpath, SITE_BASE to /<repo>/.
-      SITE_URL: ${{ vars.SITE_URL || 'https://weedsofmelbourne.org' }}
-      SITE_BASE: ${{ vars.SITE_BASE || '/' }}
+      # variables, never from a hardcoded value in the source. The defaults are
+      # this repo's Pages project site; set the variables to move to a domain
+      # root (SITE_BASE: / and SITE_URL: the domain).
+      SITE_URL: ${{ vars.SITE_URL || 'https://davmos15.github.io' }}
+      SITE_BASE: ${{ vars.SITE_BASE || '/melbourne-weeds/' }}
     steps:
       - uses: actions/checkout@v4
 

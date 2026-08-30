@@ -247,23 +247,35 @@ async function main(): Promise<void> {
       'A third fixture paragraph, so pages have a plausible length and the previous/next controls sit below a real scroll.',
     ];
 
+    const termSlug = (name: string) =>
+      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
     const terms = [
       ...HABITATS.filter((h) => seed.habitats.includes(h.slug)).map((h) => ({
         taxonomy: 'post_tag',
         slug: h.wp,
         name: h.label,
       })),
-      ...seed.chain.map(([rank, name]) => ({
-        taxonomy: rank,
-        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
-        name,
-      })),
+      // Rank-named taxonomies — the shape recon calls case 1.
+      ...seed.chain.map(([rank, name]) => ({ taxonomy: rank, slug: termSlug(name), name })),
+      // The same chain again in one hierarchical taxonomy — the shape
+      // weedsofmelbourne.org actually uses, which recon calls case 2. Both are
+      // present so either route can be exercised from the same fixture.
+      ...seed.chain.map(([, name]) => ({ taxonomy: 'classification', slug: termSlug(name), name })),
     ];
+
     for (const term of terms) {
       const key = `${term.taxonomy}::${term.slug}`;
       if (seenTerm.has(key)) continue;
       seenTerm.add(key);
-      wxrTerms.push({ ...term, parent: '' });
+      // In the nested taxonomy a term's parent is the rank above it in this
+      // seed's chain; everywhere else terms are flat.
+      let parent = '';
+      if (term.taxonomy === 'classification') {
+        const at = seed.chain.findIndex(([, name]) => termSlug(name) === term.slug);
+        if (at > 0) parent = termSlug(seed.chain[at - 1][1]);
+      }
+      wxrTerms.push({ ...term, parent });
     }
 
     wxrItems.push({

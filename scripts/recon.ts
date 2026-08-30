@@ -215,6 +215,7 @@ async function surveyWxr(path: string): Promise<Survey> {
 async function suggestMap(
   survey: Survey,
   rankTaxonomies: [string, { label: string }][],
+  nestingTaxonomy: string | null,
 ): Promise<string> {
   const ranks: Partial<Record<Rank, string>> = {};
   const order: Rank[] = ['class', 'superorder', 'order', 'family', 'genus', 'species'];
@@ -246,10 +247,29 @@ async function suggestMap(
       tax.terms.some((t) => t.slug === 'crackplants' || t.slug === 'paddockweeds'),
     )?.[0] ?? 'post_tag';
 
+  const readme =
+    'Suggested by npm run recon. Check it against data/raw/terms.json, then move ' +
+    'it to data/taxonomy-map.json to put it into effect. Delete this _readme key.';
+
+  if (nestingTaxonomy) {
+    return dumpRaw('taxonomy-map.suggested.json', {
+      _readme:
+        `${readme} The chain is nested inside the "${nestingTaxonomy}" taxonomy: the ` +
+        'importer follows each listing\'s parent links to order the chain, then labels ' +
+        'it against `ranks` aligned from the species end, so a chain that skips a rank ' +
+        'near the root (ferns and conifers skip superorder) still comes out right. ' +
+        'Confirm the rank list below matches what data/raw/terms.json actually shows.',
+      fromNesting: {
+        taxonomy: nestingTaxonomy,
+        ranks: ['class', 'superorder', 'order', 'family', 'genus', 'species'],
+      },
+      habitatTaxonomy,
+      postType: 'posts',
+    });
+  }
+
   return dumpRaw('taxonomy-map.suggested.json', {
-    _readme:
-      'Suggested by npm run recon. Check it against data/raw/terms.json, then move ' +
-      'it to data/taxonomy-map.json to put it into effect. Delete this _readme key.',
+    _readme: readme,
     ranks,
     habitatTaxonomy,
     postType: 'posts',
@@ -257,6 +277,7 @@ async function suggestMap(
 }
 
 let pendingSuggestion: [string, { label: string }][] | null = null;
+let pendingNesting: string | null = null;
 
 function report(survey: Survey): void {
   console.log(`Source: ${survey.origin}`);
@@ -307,10 +328,15 @@ function report(survey: Survey): void {
   /* The question the importer cannot guess. */
   heading('Rank chain — where does it live?');
   const rankNames = ['class', 'superorder', 'order', 'family', 'genus', 'species'];
+  // Word boundaries, not substrings: "classification" is a taxonomy that holds
+  // the whole chain, not the taxonomy for the rank "class".
+  const namesARank = (text: string) =>
+    rankNames.some((r) => new RegExp(`(^|[^a-z])${r}([^a-z]|$)`).test(text));
   const rankTaxonomies = [...survey.taxonomies].filter(
-    ([key, tax]) =>
-      rankNames.some((r) => key.toLowerCase().includes(r) || tax.label.toLowerCase().includes(r)),
+    ([key, tax]) => namesARank(key.toLowerCase()) || namesARank(tax.label.toLowerCase()),
   );
+
+  const nested = [...survey.taxonomies].filter(([, t]) => t.terms.some((term) => term.parent));
 
   if (rankTaxonomies.length) {
     console.log('  Found taxonomies that look like ranks:');
@@ -320,21 +346,20 @@ function report(survey: Survey): void {
     pendingSuggestion = rankTaxonomies;
     console.log('\n  → The chain is in the data. A suggested map has been written for you to');
     console.log('    check; see the end of this report.');
-  } else {
-    const nested = [...survey.taxonomies].filter(([, t]) => t.terms.some((term) => term.parent));
-    if (nested.length) {
-      console.log('  No rank-named taxonomies, but these have nesting:');
-      for (const [key, tax] of nested) {
-        console.log(`    ${key}: ${tax.terms.filter((t) => t.parent).length} of ${tax.terms.length} terms have a parent`);
-      }
-      console.log('\n  → The chain may be encoded as nesting depth. Set RANK_FROM_NESTING, but');
-      console.log('    confirm the depth order by hand against data/raw/terms.json first.');
-    } else {
-      console.log('  No rank taxonomy and no nesting found.');
-      console.log('\n  → The chain is probably only in the hand-built HTML on /classification.');
-      console.log('    That is a separate, more fragile scrape-and-join job (join on species');
-      console.log('    name) and must be planned deliberately — do not guess it.');
+  } else if (nested.length) {
+    console.log('  No rank-named taxonomies, but these are hierarchical:');
+    for (const [key, tax] of nested) {
+      const withParent = tax.terms.filter((t) => t.parent).length;
+      console.log(`    ${key} — ${tax.label}: ${withParent} of ${tax.terms.length} terms have a parent`);
     }
+    pendingNesting = nested[0][0];
+    console.log('\n  → The chain is encoded as nesting inside one taxonomy. A suggested map');
+    console.log('    has been written for you to check; see the end of this report.');
+  } else {
+    console.log('  No rank taxonomy and no nesting found.');
+    console.log('\n  → The chain is probably only in the hand-built HTML on /classification.');
+    console.log('    That is a separate, more fragile scrape-and-join job (join on species');
+    console.log('    name) and must be planned deliberately — do not guess it.');
   }
 
   heading('Habitat tag check');
@@ -359,8 +384,8 @@ async function main(): Promise<void> {
   const survey = wxr ? await surveyWxr(wxr) : await surveyApi();
   report(survey);
 
-  if (pendingSuggestion) {
-    const path = await suggestMap(survey, pendingSuggestion);
+  if (pendingSuggestion || pendingNesting) {
+    const path = await suggestMap(survey, pendingSuggestion ?? [], pendingNesting);
     console.log('Suggested taxonomy map');
     console.log('──────────────────────');
     console.log(`  ${path}`);

@@ -3,11 +3,15 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // Both of these are read from the environment so that moving between a project
-// subpath (username.github.io/melbourne-weeds/) and the real domain root
-// (weedsofmelbourne.org) is a deploy-time change, never a code change.
-// SPEC §2: listing URLs must eventually be `/{slug}/` at a domain root.
-const SITE_URL = process.env.SITE_URL ?? 'https://weedsofmelbourne.org';
-const SITE_BASE = process.env.SITE_BASE ?? '/';
+// subpath and a domain root is a deploy-time change, never a code change.
+//
+// The defaults are the GitHub Pages project site, because that is where this
+// actually publishes. SPEC §2 assumed the build would eventually be served from
+// weedsofmelbourne.org itself — that is not our domain, so slug-verbatim URLs
+// buy portability rather than link compatibility. Point SITE_URL/SITE_BASE at a
+// domain root if that ever changes.
+const SITE_URL = process.env.SITE_URL ?? 'https://davmos15.github.io';
+const SITE_BASE = process.env.SITE_BASE ?? '/melbourne-weeds/';
 
 export default defineConfig({
   site: SITE_URL,

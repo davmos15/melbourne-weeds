@@ -66,10 +66,9 @@ Two repository variables control the published URL:
 
 | Variable | Default | Notes |
 |---|---|---|
-| `SITE_URL` | `https://weedsofmelbourne.org` | Canonical URLs, sitemap, Open Graph |
-| `SITE_BASE` | `/` | Set to `/<repo>/` **only** if serving from a project subpath |
+| `SITE_URL` | `https://davmos15.github.io` | Canonical URLs, sitemap, Open Graph |
+| `SITE_BASE` | `/melbourne-weeds/` | Set to `/` when serving from a domain root |
 
-Listing URLs are `/{slug}/` using the exact WordPress slug, so the site needs to
-be served from a **domain root** for existing links to keep working. Every
-internal link goes through `u()` in `src/lib/url.ts`, so switching between a
-subpath and the root is a variable change, not a code change.
+The defaults publish to <https://davmos15.github.io/melbourne-weeds/>. Every
+internal link goes through `u()` in `src/lib/url.ts`, so moving to a domain root
+later is a variable change, not a code change.

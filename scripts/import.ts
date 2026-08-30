@@ -85,6 +85,119 @@ const HABITAT_TAXONOMY = process.env.WP_HABITAT_TAXONOMY ?? TAXONOMY_MAP.habitat
 /** Which post type holds the listings. */
 const POST_TYPE = process.env.WP_POST_TYPE ?? TAXONOMY_MAP.postType ?? 'posts';
 
+/* ------------------------------------------------------- nested rank chain */
+
+/** A term in the hierarchical taxonomy that carries the rank chain. */
+interface TermNode {
+  slug: string;
+  name: string;
+  /** Parent's slug, or '' at the root. Normalised: WXR gives slugs, the API ids. */
+  parent: string;
+}
+
+/** slug -> term, for the taxonomy named by fromNesting. Empty when unused. */
+let termTable = new Map<string, TermNode>();
+
+interface WpTaxonomyInfo { rest_base: string }
+interface WpTermRow { id: number; name: string; slug: string; parent?: number }
+
+/** Pull every term of one taxonomy from the REST API, resolving parent ids to slugs. */
+async function fetchTermTable(taxonomy: string): Promise<Map<string, TermNode>> {
+  const { data: taxonomies } = await api<Record<string, WpTaxonomyInfo>>('/taxonomies');
+  const restBase = taxonomies[taxonomy]?.rest_base ?? taxonomy;
+
+  const rows: WpTermRow[] = [];
+  for (let page = 1; page <= 60; page += 1) {
+    const { data } = await api<WpTermRow[]>(`/${restBase}?per_page=100&page=${page}`);
+    rows.push(...data);
+    if (data.length < 100) break;
+  }
+
+  const slugById = new Map(rows.map((r) => [r.id, r.slug]));
+  const table = new Map<string, TermNode>();
+  for (const row of rows) {
+    table.set(row.slug, {
+      slug: row.slug,
+      name: decodeEntities(row.name),
+      parent: (row.parent && slugById.get(row.parent)) || '',
+    });
+  }
+  console.log(`  ${table.size} terms in "${taxonomy}"`);
+  return table;
+}
+
+/**
+ * The chain for one listing, ordered root -> leaf.
+ *
+ * The order comes from the data, not from an assumption: every term the post
+ * carries in the taxonomy is walked up its parent links, and the longest
+ * resulting chain is the path. Ranks are then labelled from the *species end*
+ * backwards, so a chain that skips a rank near the root — ferns and conifers
+ * skip superorder — still lands its family, genus and species correctly.
+ */
+function nestedPath(post: WpPost, config: { taxonomy: string; ranks: Rank[] }): PathNode[] {
+  const owned = termGroups(post)
+    .filter((t) => t.taxonomy === config.taxonomy)
+    .map((t) => t.slug);
+  if (!owned.length) return [];
+
+  const chainTo = (slug: string): TermNode[] => {
+    const out: TermNode[] = [];
+    const seen = new Set<string>();
+    let cursor: string | undefined = slug;
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor);
+      const node = termTable.get(cursor);
+      if (!node) break;
+      out.unshift(node);
+      cursor = node.parent || undefined;
+    }
+    return out;
+  };
+
+  let best: TermNode[] = [];
+  for (const slug of owned) {
+    const chain = chainTo(slug);
+    if (chain.length > best.length) best = chain;
+  }
+  if (!best.length) return [];
+
+  const { ranks } = config;
+  return best.map((node, i) => {
+    // The root is always the topmost rank; everything below it is aligned from
+    // the species end. A chain that skips a rank in the middle (no superorder)
+    // then still lands order/family/genus/species correctly, and its root is
+    // still the class rather than being pulled down a level.
+    const fromLeaf = best.length - i; // 1 = the leaf
+    const rank = i === 0 ? ranks[0] : ranks[ranks.length - fromLeaf] ?? ranks[0];
+    return { rank, name: node.name, slug: node.slug };
+  });
+}
+
+/**
+ * Botanical nomenclature has conventional endings. This does not decide
+ * anything — the chain's order comes from the parent links — but it is a cheap
+ * check that the rank *labels* landed where they should, and anything it
+ * disagrees with is named in the validation report rather than swallowed.
+ */
+const RANK_SUFFIX: Partial<Record<Rank, RegExp>> = {
+  class: /opsida$|phyta$|atae$/i,
+  superorder: /anae$/i,
+  order: /ales$/i,
+  family: /aceae$/i,
+};
+
+function suffixMismatches(path: PathNode[]): string[] {
+  const out: string[] = [];
+  for (const node of path) {
+    const pattern = RANK_SUFFIX[node.rank];
+    if (pattern && !pattern.test(node.name)) {
+      out.push(`${node.name} labelled ${node.rank}`);
+    }
+  }
+  return out;
+}
+
 /** One row of the validation report. */
 interface Problem {
   slug: string;
@@ -136,21 +249,9 @@ function habitatsOf(post: WpPost): string[] {
 }
 
 function pathOf(post: WpPost): PathNode[] {
+  if (RANK_FROM_NESTING) return nestedPath(post, RANK_FROM_NESTING);
+
   const terms = termGroups(post);
-
-  if (RANK_FROM_NESTING) {
-    const inTaxonomy = terms.filter((t) => t.taxonomy === RANK_FROM_NESTING.taxonomy);
-    // Depth is resolved by the caller, which has the full term table; without
-    // it the chain cannot be ordered, so this stays deliberately unimplemented
-    // until recon says it is the right shape.
-    if (inTaxonomy.length) {
-      throw new Error(
-        'RANK_FROM_NESTING is set but the depth resolution is not implemented. ' +
-          'Read data/raw/terms.json, confirm the nesting order, then implement it here.',
-      );
-    }
-  }
-
   const path: PathNode[] = [];
   for (const [rank, taxonomy] of Object.entries(RANK_TAXONOMIES) as [Rank, string][]) {
     const term = terms.find((t) => t.taxonomy === taxonomy);
@@ -223,13 +324,28 @@ async function fetchAll(): Promise<WpPost[]> {
 
 async function loadPosts(): Promise<WpPost[]> {
   const wxr = wxrPathFromArgs();
+
   if (wxr) {
     console.log(`Importing from the export file ${wxr}\n`);
     const source = await readWxr(wxr, POST_TYPE === 'posts' ? 'post' : POST_TYPE);
     console.log(`  ${source.posts.length} published ${POST_TYPE}, ${source.terms.length} terms`);
+    if (RANK_FROM_NESTING) {
+      // The export already declares every term's parent, by slug.
+      for (const term of source.terms) {
+        if (term.taxonomy !== RANK_FROM_NESTING.taxonomy) continue;
+        termTable.set(term.slug, { slug: term.slug, name: term.name, parent: term.parent });
+      }
+      console.log(`  ${termTable.size} terms in "${RANK_FROM_NESTING.taxonomy}"`);
+    }
     return source.posts;
   }
+
   console.log(`Importing from ${SOURCE}\n`);
+  // The rank chain lives in the parent links, and ?_embed does not carry them,
+  // so the taxonomy's terms are fetched once up front.
+  if (RANK_FROM_NESTING) {
+    termTable = await fetchTermTable(RANK_FROM_NESTING.taxonomy);
+  }
   return fetchAll();
 }
 
@@ -248,6 +364,9 @@ async function main(): Promise<void> {
 
     if (!ok) problems.push({ slug: post.slug, common, issue: 'title did not split into common + binomial' });
     if (!path.length) problems.push({ slug: post.slug, common, issue: 'no rank chain' });
+    for (const mismatch of suffixMismatches(path)) {
+      problems.push({ slug: post.slug, common, issue: `rank label looks wrong: ${mismatch}` });
+    }
     if (!habitats.length) problems.push({ slug: post.slug, common, issue: 'no habitat tags' });
     if (!gallery.length) problems.push({ slug: post.slug, common, issue: 'no images' });
     if (!body.length) problems.push({ slug: post.slug, common, issue: 'empty body' });
@@ -290,6 +409,22 @@ async function main(): Promise<void> {
   }
 
   console.log(`\n${listings.length} listings written to ${out}\n`);
+
+  if (RANK_FROM_NESTING) {
+    const lengths = new Map<number, number>();
+    for (const listing of listings) {
+      lengths.set(listing.path.length, (lengths.get(listing.path.length) ?? 0) + 1);
+    }
+    console.log('Rank chain lengths');
+    console.log('──────────────────');
+    for (const [length, count] of [...lengths].sort((a, b) => a[0] - b[0])) {
+      const example = listings.find((l) => l.path.length === length);
+      const shape = example?.path.map((n) => n.rank).join(' > ') ?? '';
+      console.log(`  ${String(count).padStart(4)} listings with ${length} levels   ${shape}`);
+    }
+    console.log('');
+  }
+
   console.log('Validation report');
   console.log('─────────────────');
 
