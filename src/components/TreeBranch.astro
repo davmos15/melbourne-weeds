@@ -8,7 +8,7 @@ const { node } = Astro.props;
 
 const hasChildren = node.children.length > 0;
 const count = node.listings.length;
-const isSpecies = node.rank === 'species';
+const isSpecies = node.rank === 'species' || node.rank === 'subspecies';
 ---
 
 <li>

@@ -542,7 +542,8 @@ hr { border: 0; border-top: var(--hair); margin: var(--s-6) 0; }
 .crumb a { text-decoration: none; display: block; padding-block: var(--s-1); }
 .crumb a:hover .crumb-term { color: var(--bloom); }
 .crumb-term { font-weight: 600; }
-.crumb .species .crumb-term { font-style: italic; }
+.crumb .species .crumb-term,
+.crumb .subspecies .crumb-term { font-style: italic; }
 
 .links-list { display: grid; gap: 0; }
 .links-list a,

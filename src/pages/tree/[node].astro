@@ -20,7 +20,7 @@ export const getStaticPaths = (() => {
 
 const { node } = Astro.props;
 const lead = node.listings.find((l) => l.gallery.length)?.gallery[0];
-const isSpecies = node.rank === 'species';
+const isSpecies = node.rank === 'species' || node.rank === 'subspecies';
 const label = rankLabel(node.rank);
 ---
 

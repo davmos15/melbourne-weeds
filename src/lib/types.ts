@@ -1,9 +1,22 @@
 /** SPEC §5 — the data model. One entry per plant in data/listings.json. */
 
-export type Rank = 'class' | 'superorder' | 'order' | 'family' | 'genus' | 'species';
+export type Rank =
+  | 'class'
+  | 'superorder'
+  | 'order'
+  | 'family'
+  | 'genus'
+  | 'species'
+  | 'subspecies';
 
-/** Ferns and conifers skip superorder, so a path is variable length. */
-export const RANKS: Rank[] = ['class', 'superorder', 'order', 'family', 'genus', 'species'];
+/**
+ * Variable length in both directions. Ferns and conifers skip superorder; a
+ * few listings omit family; and infraspecific taxa (ssp./var.) add a level
+ * below species. Nothing may assume six.
+ */
+export const RANKS: Rank[] = [
+  'class', 'superorder', 'order', 'family', 'genus', 'species', 'subspecies',
+];
 
 export interface PathNode {
   rank: Rank;

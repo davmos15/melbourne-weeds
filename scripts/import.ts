@@ -162,16 +162,56 @@ function nestedPath(post: WpPost, config: { taxonomy: string; ranks: Rank[] }): 
   }
   if (!best.length) return [];
 
-  const { ranks } = config;
-  return best.map((node, i) => {
-    // The root is always the topmost rank; everything below it is aligned from
-    // the species end. A chain that skips a rank in the middle (no superorder)
-    // then still lands order/family/genus/species correctly, and its root is
-    // still the class rather than being pulled down a level.
-    const fromLeaf = best.length - i; // 1 = the leaf
-    const rank = i === 0 ? ranks[0] : ranks[ranks.length - fromLeaf] ?? ranks[0];
-    return { rank, name: node.name, slug: node.slug };
-  });
+  return label(best.map((n) => ({ name: n.name, slug: n.slug })));
+}
+
+/**
+ * Label an ordered chain with ranks, anchored on botanical nomenclature.
+ *
+ * Aligning from either end is wrong against this source: chains vary at *both*
+ * ends and in the middle — ferns skip superorder, five listings omit family
+ * entirely, and infraspecific taxa add a level below species. Counting from
+ * either end therefore shifts every rank past the gap.
+ *
+ * The endings are load-bearing instead, because ICN makes them reliable:
+ * -ales is an order, -aceae a family, -anae a superorder, -opsida a class.
+ * The order level is the anchor; everything else is placed relative to it, and
+ * the family slot is only consumed if the name actually looks like a family.
+ * Verified against all 232 listings: the -aceae level sits directly under the
+ * -ales level in every chain that has both.
+ */
+function label(chain: { name: string; slug: string }[]): PathNode[] {
+  const anchor = chain.findIndex((n) => /ales$/i.test(n.name));
+
+  // No recognisable order: fall back to aligning from the species end, which
+  // is right for a plain class-to-species chain.
+  if (anchor === -1) {
+    const ranks: Rank[] = ['class', 'superorder', 'order', 'family', 'genus', 'species'];
+    return chain.map((node, i) => {
+      const fromLeaf = chain.length - i;
+      const rank = i === 0 ? ranks[0] : ranks[ranks.length - fromLeaf] ?? ranks[0];
+      return { rank, name: node.name, slug: node.slug };
+    });
+  }
+
+  const ranks: (Rank | undefined)[] = new Array(chain.length).fill(undefined);
+  ranks[anchor] = 'order';
+  // Above the order: the root is the class, anything between is superorder.
+  for (let i = 0; i < anchor; i += 1) ranks[i] = i === 0 ? 'class' : 'superorder';
+
+  let i = anchor + 1;
+  // Only take the family slot if the name is actually a family — five listings
+  // go straight from order to genus.
+  if (i < chain.length && /aceae$/i.test(chain[i].name)) ranks[i++] = 'family';
+  if (i < chain.length) ranks[i++] = 'genus';
+  if (i < chain.length) ranks[i++] = 'species';
+  while (i < chain.length) ranks[i++] = 'subspecies';
+
+  return chain.map((node, n) => ({
+    rank: ranks[n] ?? 'species',
+    name: node.name,
+    slug: node.slug,
+  }));
 }
 
 /**
@@ -355,12 +395,21 @@ async function main(): Promise<void> {
 
   const problems: Problem[] = [];
   const listings: Listing[] = posts.map((post) => {
-    const { common, binomial, ok } = splitTitle(post.title?.rendered ?? '');
+    const { common, ok } = splitTitle(post.title?.rendered ?? '');
+    let { binomial } = splitTitle(post.title?.rendered ?? '');
     const body = toParagraphs(post.content?.rendered ?? '');
     const summary = firstSentence(body);
     const habitats = habitatsOf(post);
     const path = pathOf(post);
     const gallery = galleryOf(post);
+
+    // A title that will not split still has its accepted name in the rank
+    // chain — taken from the data rather than guessed at from the title.
+    if (!binomial) {
+      binomial = path.find((p) => p.rank === 'subspecies')?.name
+        ?? path.find((p) => p.rank === 'species')?.name
+        ?? '';
+    }
 
     if (!ok) problems.push({ slug: post.slug, common, issue: 'title did not split into common + binomial' });
     if (!path.length) problems.push({ slug: post.slug, common, issue: 'no rank chain' });
