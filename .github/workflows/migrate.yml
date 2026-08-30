@@ -38,7 +38,10 @@ permissions:
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # The images phase downloads and re-encodes a few thousand photographs on a
+    # cold cache. Timing out loses the whole run, since nothing is pushed until
+    # the end, so this is set well clear of the expected hour or two.
+    timeout-minutes: 350
     env:
       WP_SOURCE: ${{ inputs.source }}
     steps:
