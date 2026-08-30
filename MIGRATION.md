@@ -7,7 +7,10 @@ all.
 
 ---
 
-## Blocker: weedsofmelbourne.org is unreachable from here
+## Why there are three routes
+
+The migration reads from weedsofmelbourne.org. That is straightforward from
+most places and impossible from one: the sandbox this repo was built in.
 
 Outbound HTTPS in this environment goes through a policy-enforcing egress
 proxy, and the source host is not on its allow-list:
@@ -27,30 +30,60 @@ host:   weedsofmelbourne.org:443
 
 This is an organisation egress policy, not a WordPress error and not something
 to route around. npm, GitHub and Google Fonts all resolve from the same
-environment, so it is specific to that destination.
+environment, so it is specific to that destination. **A GitHub Actions runner
+has no such restriction**, which is what Route A is for.
 
 ---
 
-## Route A — the export file (no network needed)
+## Route A — the Migrate workflow (recommended)
 
-WordPress can hand over everything the importer needs as a single file. In
-`wp-admin`, go to **Tools → Export → All content → Download Export File**. That
-`.xml` (a WXR file) contains slugs, post ids, dates, the raw title HTML, every
-body, every taxonomy term with its taxonomy name, and the attachment URLs.
+**Actions → Migrate content → Run workflow.** A GitHub runner has ordinary
+internet access, so it can reach the site even though the sandbox this repo was
+built in cannot. No local setup, no `wp-admin` access, nothing to install.
 
-For the photographs, zip `wp-content/uploads/` over FTP/SFTP or via the host's
-file manager and unzip it locally.
+Reading published posts through `/wp-json/wp/v2/` needs no credentials — it is
+the same content the site serves to any visitor — so this route does not depend
+on owning or administering the source site.
+
+Run it in three passes:
+
+1. **`recon`** — the report lands in the run's summary page, including a
+   suggested taxonomy map. Raw dumps are attached as an artifact.
+   Read it. If the suggested map is right, commit it as
+   `data/taxonomy-map.json` (dropping the `_readme` key).
+2. **`import`** — writes `data/listings.json` and pushes it to the
+   `migration/content` branch. Read the validation report in the summary; fix
+   what it names in `data/overrides.json`.
+3. **`images`** — downloads and derives every photograph, prints the size
+   budget, and pushes `public/img/` to the same branch.
+
+Results go to a branch rather than straight to `main`: `listings.json` is worth
+reading before it lands, and a few thousand new image files is not a reviewable
+pull request. Merge when you are happy with it.
+
+## Route B — from your own machine
+
+Identical, if you have Node 20+ and can reach the site:
 
 ```bash
-npm run recon  -- --wxr=data/raw/weedsofmelbourne.xml
-#   read the report, read data/raw/, then:
-mv data/raw/taxonomy-map.suggested.json data/taxonomy-map.json
-
-npm run import -- --wxr=data/raw/weedsofmelbourne.xml
-#   fix anything the validation report names, in data/overrides.json
-
-npm run images -- --media=/path/to/uploads
+npm ci
+npm run recon
+mv data/raw/taxonomy-map.suggested.json data/taxonomy-map.json   # after reading it
+npm run import
+npm run images
 npm run build
+```
+
+## Route C — a WordPress export file
+
+Only available to someone with `wp-admin` on the source site (**Tools → Export →
+All content**), plus a copy of `wp-content/uploads/`. **We do not have that
+access**, so this route is for Adi or whoever administers the site, not for us.
+
+```bash
+npm run recon  -- --wxr=export.xml
+npm run import -- --wxr=export.xml
+npm run images -- --media=/path/to/uploads
 ```
 
 `scripts/wxr.ts` parses the export into exactly the shape the REST API returns
@@ -58,21 +91,9 @@ with `?_embed`, so the importer, the validation report and the rank-chain
 question are identical whichever route the content arrived by. It is an
 alternative source, not a second importer.
 
-This whole path is exercised on every fixture run — `npm run fixtures` emits a
+This route is exercised on every fixture run — `npm run fixtures` emits a
 synthetic `data/fixtures/export.xml` and a matching `data/fixtures/uploads/`
 tree for exactly that purpose.
-
-## Route B — the live REST API
-
-Identical, minus the flags, once the host is reachable:
-
-```bash
-npm run recon
-mv data/raw/taxonomy-map.suggested.json data/taxonomy-map.json
-npm run import
-npm run images
-npm run build
-```
 
 ---
 

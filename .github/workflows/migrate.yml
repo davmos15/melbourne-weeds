@@ -1,0 +1,153 @@
+name: Migrate content
+
+# The migration phases need to reach weedsofmelbourne.org. A GitHub runner can;
+# the sandbox this repo was built in cannot, and a WordPress export needs
+# wp-admin access we do not have. So the phases run here instead, on demand,
+# from the Actions tab.
+#
+# Reading published posts through /wp-json/wp/v2/ needs no credentials — it is
+# the same content the site serves to any visitor. Nothing here writes to the
+# source site.
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Which migration phase to run'
+        type: choice
+        default: recon
+        options:
+          - recon
+          - import
+          - images
+      source:
+        description: 'WordPress site to read from'
+        default: 'https://weedsofmelbourne.org'
+      branch:
+        description: 'Branch to push results to (import and images only)'
+        default: 'migration/content'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      WP_SOURCE: ${{ inputs.source }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # ---------------------------------------------------------------- recon
+
+      - name: Phase 0 — recon
+        if: inputs.phase == 'recon'
+        run: |
+          set -o pipefail
+          npm run recon 2>&1 | tee recon.log
+
+      - name: Recon report
+        if: inputs.phase == 'recon'
+        run: |
+          {
+            echo '## Phase 0 — reconnaissance'
+            echo
+            echo "Source: \`${WP_SOURCE}\`"
+            echo
+            echo '```'
+            cat recon.log
+            echo '```'
+            if [ -f data/raw/taxonomy-map.suggested.json ]; then
+              echo
+              echo '### Suggested taxonomy map'
+              echo
+              echo 'Check this against `terms.json` in the artifact below. If it is right,'
+              echo 'commit it to the repository as `data/taxonomy-map.json` (dropping the'
+              echo '`_readme` key), then run this workflow again with phase `import`.'
+              echo
+              echo '```json'
+              cat data/raw/taxonomy-map.suggested.json
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw dumps
+        if: inputs.phase == 'recon'
+        uses: actions/upload-artifact@v4
+        with:
+          name: recon-raw
+          path: data/raw/
+          retention-days: 30
+
+      # --------------------------------------------------------------- import
+
+      - name: Phase 1 — import
+        if: inputs.phase == 'import'
+        run: |
+          set -o pipefail
+          if [ ! -f data/taxonomy-map.json ]; then
+            echo "::warning::data/taxonomy-map.json is absent, so every listing will import with an empty rank chain and the classification tree will be empty. Run the recon phase first and commit the map."
+          fi
+          npm run import 2>&1 | tee import.log
+
+      - name: Import report
+        if: inputs.phase == 'import'
+        run: |
+          {
+            echo '## Phase 1 — import'
+            echo
+            echo '```'
+            tail -n 120 import.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # --------------------------------------------------------------- images
+
+      - name: Phase 2 — images
+        if: inputs.phase == 'images'
+        run: |
+          set -o pipefail
+          npm run images 2>&1 | tee images.log
+
+      - name: Image budget
+        if: inputs.phase == 'images'
+        run: |
+          {
+            echo '## Phase 2 — images'
+            echo
+            echo '```'
+            tail -n 60 images.log
+            echo '```'
+            echo
+            echo 'SPEC §4: if this is over ~700 MB, move `public/img/` to an object store'
+            echo 'rather than degrading the photographs. Do not use Git LFS — Pages serves'
+            echo 'the pointer file, not the image.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ----------------------------------------------------------------- push
+
+      # Results go to their own branch, not to main: listings.json is worth
+      # reading before it lands, and a few thousand new image files is not a
+      # reviewable pull request.
+      - name: Push results
+        if: inputs.phase != 'recon'
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A data/listings.json public/img
+          if git diff --cached --quiet; then
+            echo "::notice::Nothing changed."
+            exit 0
+          fi
+          git checkout -B "${{ inputs.branch }}"
+          git commit -m "Migrate: ${{ inputs.phase }} from ${WP_SOURCE}"
+          git push -u origin "${{ inputs.branch }}" --force-with-lease
+          echo "Pushed to \`${{ inputs.branch }}\`." >> "$GITHUB_STEP_SUMMARY"

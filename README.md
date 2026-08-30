@@ -35,9 +35,12 @@ Without fixtures the site builds correctly but empty, because
 | `npm run import` | Phase 1 — WordPress → `data/listings.json` |
 | `npm run images` | Phase 2 — download and derive `public/img/` |
 
-Recon, import and images each take their content from the live REST API or,
-with no network access at all, from a WordPress **Tools → Export** file and a
-local `uploads/` directory:
+The easiest way to run these is **Actions → Migrate content → Run workflow** —
+a GitHub runner can reach the source site and needs no local setup. See
+`MIGRATION.md`.
+
+They also accept a WordPress **Tools → Export** file and a local `uploads/`
+directory, for whoever has `wp-admin` on the source:
 
 ```bash
 npm run recon  -- --wxr=export.xml
